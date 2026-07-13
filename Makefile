@@ -42,7 +42,7 @@ clean:
 	@echo "  CLEAN"
 	$(V)$(MAKE) -C $(ARM9DIR) clean --no-print-directory
 	$(V)$(MAKE) -C $(ARM7DIR) clean --no-print-directory
-	$(V)$(RM) $(NDS_OUT)
+	$(V)$(RM) $(TARGET)-*.nds
 
 arm9:
 	$(V)+$(MAKE) -C $(ARM9DIR) --no-print-directory
