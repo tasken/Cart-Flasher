@@ -171,9 +171,6 @@ void ShowProgress(u16 *screen, uint32_t current, uint32_t total, const char* sta
 	uint32_t prog_width = ((total > 0) && (current <= total)) ? (current * (bar_width - 4)) / total : 0;
 	uint32_t prog_percent = ((total > 0) && (current <= total)) ? (current * 100) / total : 0;
 
-	DrawRectangle(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, bar_width, FONT_HEIGHT, STD_COLOR_BG);
-	DrawString(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, STD_COLOR_FONT, status);
-
 	// draw the initial outline
 	if (current == 0 || last_prog_width > prog_width)
 	{
@@ -181,6 +178,9 @@ void ShowProgress(u16 *screen, uint32_t current, uint32_t total, const char* sta
 		DrawRectangle(screen, bar_pos_x, bar_pos_y, bar_width, bar_height, STD_COLOR_FONT);
 		DrawRectangle(screen, bar_pos_x + 1, bar_pos_y + 1, bar_width - 2, bar_height - 2, STD_COLOR_BG);
 	}
+
+	DrawRectangle(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, bar_width, FONT_HEIGHT, STD_COLOR_BG);
+	DrawString(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, STD_COLOR_FONT, status);
 
 	// only draw the rectangle if it's changed.
 	if (current == 0 || last_prog_width != prog_width)

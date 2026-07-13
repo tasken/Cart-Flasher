@@ -21,8 +21,13 @@ bool file_exists(const char* filename) {
 
 return_codes_t mount_fat(void) {
 	if(!file_exists("sd:/") && !file_exists("fat:/")) {
-		return fatInitDefault() ? ALL_OK : FAT_MOUNT_FAILED;
+		if (fatInitDefault()) {
+			mkdir("/cart-backups", 0777);
+			return ALL_OK;
+		}
+		return FAT_MOUNT_FAILED;
 	}
+	mkdir("/cart-backups", 0777);
 	return ALL_OK;
 }
 
@@ -97,9 +102,9 @@ namespace flashcart_core {
 }
 
 static char* calculate_backup_path(const char *cart_name) {
-    int path_len = snprintf(NULL, 0, "/%s-backup.bin", cart_name) + 1;
+    int path_len = snprintf(NULL, 0, "/cart-backups/%s-backup.bin", cart_name) + 1;
     char *path = (char *)malloc(path_len);
-    snprintf(path, path_len, "/%s-backup.bin", cart_name);
+    snprintf(path, path_len, "/cart-backups/%s-backup.bin", cart_name);
     return path;
 }
 
@@ -114,11 +119,17 @@ return_codes_t DumpFlash(flashcart_core::Flashcart* cart)
 
 	u8 *Flashrom = new u8[chunkSize]; //Allocate a new array to store the flashrom we are about to retrieve from the flashcart
 
-	DrawRectangle(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT * 2, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
-	DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT * 2, COLOR_WHITE, "Backing up your cart...");
+	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
+	DrawString(TOP_SCREEN, FONT_WIDTH * 2, 6 * FONT_HEIGHT, COLOR_WHITE, "Backing up your cart...");
+
+	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Backing up your cart...");
 
 	for (u32 chunkOffset = 0; chunkOffset < Flash_size; chunkOffset += chunkSize) {
 		SetProgressOverride(chunkOffset, Flash_size);
+		char addrStr[64];
+		sprintf(addrStr, "Reading address: 0x%08lX", chunkOffset);
+		DrawRectangle(TOP_SCREEN, FONT_WIDTH * 2, 8 * FONT_HEIGHT, SCREEN_WIDTH - FONT_WIDTH * 4, FONT_HEIGHT, COLOR_BLACK);
+		DrawString(TOP_SCREEN, FONT_WIDTH * 2, 8 * FONT_HEIGHT, COLOR_WHITE, addrStr);
 
 		if (!cart->readFlash(chunkOffset, chunkSize, Flashrom)) {
 			delete[] Flashrom;
@@ -159,7 +170,7 @@ return_codes_t DumpFlash(flashcart_core::Flashcart* cart)
 	}
 
 	SetProgressOverride(0, 0); // Reset override
-	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "");
+	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "Backing up your cart...");
 
 	free(backup_path);
 	delete[] Flashrom;
@@ -175,11 +186,17 @@ return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
 
 	u8 *Flashrom = new u8[chunkSize]; //Allocate a new array to store the flashrom we are about to write to the flashcart
 
-	DrawRectangle(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT * 2, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
-	DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT * 2, COLOR_WHITE, "Writing to your cart...");
+	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
+	DrawString(TOP_SCREEN, FONT_WIDTH * 2, 6 * FONT_HEIGHT, COLOR_WHITE, "Writing to your cart...");
+
+	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Writing to flash...");
 
 	for (u32 chunkOffset = 0; chunkOffset < Flash_size; chunkOffset += chunkSize) {
 		SetProgressOverride(chunkOffset, Flash_size);
+		char addrStr[64];
+		sprintf(addrStr, "Writing address: 0x%08lX", chunkOffset);
+		DrawRectangle(TOP_SCREEN, FONT_WIDTH * 2, 8 * FONT_HEIGHT, SCREEN_WIDTH - FONT_WIDTH * 4, FONT_HEIGHT, COLOR_BLACK);
+		DrawString(TOP_SCREEN, FONT_WIDTH * 2, 8 * FONT_HEIGHT, COLOR_WHITE, addrStr);
 
 		if (mount_fat() != ALL_OK) {
 			delete[] Flashrom;
@@ -210,11 +227,11 @@ return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
 			return FLASH_OP_FAILED; //Flash writing failed
 		}
 		SetProgressOverride(0, 0); // Reset override before drawing absolute progress
-		ShowProgress(BOTTOM_SCREEN, chunkOffset + chunkSize, Flash_size, "Writing to your cart...");
+		ShowProgress(BOTTOM_SCREEN, chunkOffset + chunkSize, Flash_size, "Writing to flash...");
 	}
 
 	SetProgressOverride(0, 0); // Reset override
-	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "");
+	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "Writing to flash...");
 
 	delete[] Flashrom;
 	return ALL_OK;

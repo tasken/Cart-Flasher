@@ -8,6 +8,7 @@
 #include "filebrowser.h"
 #include <ctime>
 #include <algorithm>
+#include <cstdio>
 
 #define bootmsg "This tool writes directly to your\n" 					\
 				"flashcart's memory. If something\n" 					\
@@ -28,13 +29,14 @@ void print_boot_msg(void)
 {
 	// Plain black + the same blue header bar every other screen uses, not a
 	// full alarm-red screen — this is a heads-up, not a hazard warning.
-	DrawHeader(TOP_SCREEN, "Before you continue", ((SCREENWIDTH - (strlen("Before you continue") * FONT_WIDTH)) / 2));
+	char header_title[64];
+	sprintf(header_title, "Cart-Flasher %s", CART_FLASHER_VERSION);
+	DrawHeader(TOP_SCREEN, header_title, ((SCREENWIDTH - (strlen(header_title) * FONT_WIDTH)) / 2));
 	DrawString(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 2, COLOR_WHITE, bootmsg);
-	// Version info lives here, seen once at boot for bug reports, instead of
-	// permanently on the flashcart list where nobody needs it every session.
-	DrawStringF(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 13, COLOR_GREY, "Cart-Flasher %s", CART_FLASHER_VERSION);
-	DrawStringF(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 15, COLOR_GREY, "Developed by @tasken\nCommit: %s\nOriginal by jason0597 & DS-Homebrew", CART_FLASHER_COMMIT);
-	DrawString(TOP_SCREEN, FONT_WIDTH * 2, SCREENHEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Continue   <B> Power off");
+	// Spacing of 1 empty line after welcome message. A/B instructions at row 13.
+	DrawString(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 13, COLOR_YELLOW, "<A> Continue   <B> Power off");
+	// Spacing of 2 empty lines after A/B instructions. Credits at row 16.
+	DrawStringF(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 16, COLOR_GREY, "Developed by @tasken\nCommit: %s\nOriginal by jason0597 & DS-Homebrew", CART_FLASHER_COMMIT);
 
 	while (true)
 	{
@@ -214,7 +216,7 @@ void menu_lvl2(Flashcart* cart)
 		{
 			char writePath[512];
 			if (menu_sel == 1) {
-				if (!BrowseForFile("/", ".bin", writePath, sizeof(writePath))) {
+				if (!BrowseForFile("/cart-backups", ".bin", writePath, sizeof(writePath))) {
 					DrawHeader(TOP_SCREEN, cart->getName(), ((SCREENWIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
 					DrawString(TOP_SCREEN, 0, SCREENHEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <B> Back");
 					dirty = true;
