@@ -105,7 +105,7 @@ void menu_lvl1(Flashcart* cart)
 	DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREENWIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2));
 	DrawFooter(global_loglevel);
 	DrawHeader(BOTTOM_SCREEN, "Flashcart info", ((SCREENWIDTH - (14 * FONT_WIDTH)) / 2));
-	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, "%s\n%s", flashcart_list->at(0)->getAuthor(), flashcart_list->at(0)->getDescription());
+	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, "%s\n\n%s", flashcart_list->at(0)->getAuthor(), flashcart_list->at(0)->getDescription());
 	u32 flashcart_list_size = flashcart_list->size();
 
 	// Draw the list once up front; the loop below only redraws it when the
@@ -170,7 +170,7 @@ void menu_lvl1(Flashcart* cart)
 			}
 			cart = flashcart_list->at(menu_sel);
 			DrawHeader(BOTTOM_SCREEN, "Flashcart info", ((SCREENWIDTH - (14 * FONT_WIDTH)) / 2));
-			DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, "%s\n%s", cart->getAuthor(), cart->getDescription());
+			DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, "%s\n\n%s", cart->getAuthor(), cart->getDescription());
 		}
 	}
 }
@@ -267,6 +267,13 @@ void menu_lvl2(Flashcart* cart)
 						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
 							"Reading from the cart failed\npartway through. Try reseating it.\nPress <B> to return to the menu." :
 							"Writing to the cart failed\npartway through. Try reseating it.\nPress <B> to return to the menu.");
+						WaitPress(KEY_B);
+						ClearScreen(TOP_SCREEN, COLOR_BLACK);
+						break;
+
+					case MEM_ALLOC_FAILED:
+						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED,
+							"Not enough free console memory\nto buffer the firmware. Try a\nsmaller backup file, press <B>.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;

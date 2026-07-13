@@ -1,164 +1,120 @@
-#---------------------------------------------------------------------------------
-.SUFFIXES:
-#---------------------------------------------------------------------------------
-ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
-endif
+# SPDX-License-Identifier: CC0-1.0
+#
+# SPDX-FileContributor: Antonio Niño Díaz, 2023
 
-include $(DEVKITARM)/ds_rules
+export BLOCKSDS			?= /opt/blocksds/core
 
-LIBNCGC := $(CURDIR)/external/libncgc
+LIBNCGC := $(CURDIR)/vendor/libncgc
 
-#---------------------------------------------------------------------------------
-# BUILD is the directory where object files & intermediate files will be placed
-# SOURCES is a list of directories containing source code
-# INCLUDES is a list of directories containing extra header files
-# DATA is a list of directories containing binary files embedded using bin2o
-# GRAPHICS is a list of directories containing image files to be converted with grit
-# all directories are relative to this makefile
-#---------------------------------------------------------------------------------
-BUILD    := build
-SOURCES  := source external/flashcart_core external/flashcart_core/devices
-INCLUDES := include external/flashcart_core
-DATA     := data
-GRAPHICS :=
+BUILDDIR	:= build
+SOURCEDIRS	:= source vendor/flashcart_core
+INCLUDEDIRS	:= vendor/flashcart_core $(BUILDDIR) $(BUILDDIR)/data
+DATA		:= data
 
-#---------------------------------------------------------------------------------
-# options for code generation
-#---------------------------------------------------------------------------------
-ARCH := -marm -mthumb-interwork -march=armv5te -mtune=arm946e-s
-
-CFLAGS   := -g -Wall -O3\
-            $(ARCH) $(INCLUDE) -DARM9 \
-			-DCART_FLASHER_VERSION=\"$(CART_FLASHER_VERSION)\"\
-			-DCART_FLASHER_COMMIT=\"$(CART_FLASHER_COMMIT)\"\
-			-DFLASHCART_CORE_VERSION=\"$(FLASHCART_CORE_VERSION)\"\
-			-DNCGC_PLATFORM_NTR
-CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
+DEFINES		:= -DARM9 \
+		   -DCART_FLASHER_VERSION=\"$(CART_FLASHER_VERSION)\" \
+		   -DCART_FLASHER_COMMIT=\"$(CART_FLASHER_COMMIT)\" \
+		   -DFLASHCART_CORE_VERSION=\"v1.1.0-1-gb20f7f6-vendored\" \
+		   -DNCGC_PLATFORM_NTR
 
 ifneq ($(strip $(testing)),)
-	CFLAGS += -DTESTING=1
-	CXXFLAGS += -DTESTING=1
+	DEFINES += -DTESTING=1
 endif
 
-ASFLAGS  := -g $(ARCH)
-LDFLAGS   = -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LIBS		:= -lncgc -lstdc++ -lnds9
+LIBDIRS		:= $(BLOCKSDS)/libs/libnds $(LIBNCGC)
 
-#---------------------------------------------------------------------------------
-# any extra libraries we wish to link with the project
-#---------------------------------------------------------------------------------
-LIBS := -lfat -lncgc -lnds9
+NAME		:= arm9
+ELF		:= $(CURDIR)/$(TARGET).elf
+MAP		:= $(CURDIR)/$(TARGET).map
 
-#---------------------------------------------------------------------------------
-# list of directories containing libraries, this must be the top level containing
-# include and lib
-#---------------------------------------------------------------------------------
-LIBDIRS := $(LIBNDS) $(PORTLIBS) $(LIBNCGC)
+WONDERFUL_TOOLCHAIN	?= /opt/wonderful
+ARM_NONE_EABI_PATH	?= $(WONDERFUL_TOOLCHAIN)/toolchain/gcc-arm-none-eabi/bin/
+PREFIX		:= $(ARM_NONE_EABI_PATH)arm-none-eabi-
+CC		:= $(PREFIX)gcc
+CXX		:= $(PREFIX)g++
+LD		:= $(PREFIX)gcc
+RM		:= rm -rf
+MKDIR		:= mkdir -p
 
-#---------------------------------------------------------------------------------
-# no real need to edit anything past this point unless you need to add additional
-# rules for different file extensions
-#---------------------------------------------------------------------------------
-ifneq ($(BUILD),$(notdir $(CURDIR)))
-#---------------------------------------------------------------------------------
-
-export ARM9ELF := $(CURDIR)/$(TARGET).elf
-
-export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))\
-                $(foreach dir,$(DATA),$(CURDIR)/$(dir))\
-                $(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir))
-
-export DEPSDIR := $(CURDIR)/$(BUILD)
-
-CART_FLASHER_VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.1-alpha")
-CART_FLASHER_COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
-export CART_FLASHER_VERSION
-export CART_FLASHER_COMMIT
-# flashcart_core is vendored (no longer a submodule), so there's no separate repo
-# to `git describe` here. This records the snapshot it was imported from; bump it
-# by hand if you resync from upstream or make substantial local changes to it.
-export FLASHCART_CORE_VERSION := v1.1.0-1-gb20f7f6-vendored
-
-CFILES   := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES := $(filter-out example.cpp, $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp))))
-SFILES   := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-PNGFILES := $(foreach dir,$(GRAPHICS),$(notdir $(wildcard $(dir)/*.png)))
-BINFILES := $(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
-
-#---------------------------------------------------------------------------------
-# use CXX for linking C++ projects, CC for standard C
-#---------------------------------------------------------------------------------
-ifeq ($(strip $(CPPFILES)),)
-#---------------------------------------------------------------------------------
-  export LD := $(CC)
-#---------------------------------------------------------------------------------
+ifeq ($(VERBOSE),1)
+V		:=
 else
-#---------------------------------------------------------------------------------
-  export LD := $(CXX)
-#---------------------------------------------------------------------------------
+V		:= @
 endif
-#---------------------------------------------------------------------------------
 
-export OFILES_BIN   :=	$(addsuffix .o,$(BINFILES))
+SOURCES_S	:= $(shell find -L $(SOURCEDIRS) -name "*.s")
+SOURCES_C	:= $(shell find -L $(SOURCEDIRS) -name "*.c")
+SOURCES_CPP	:= $(filter-out %example.cpp, $(shell find -L $(SOURCEDIRS) -name "*.cpp"))
+SOURCES_BIN	:= $(shell find -L $(DATA) -name "*.*")
 
-export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+ARCH		:= -marm -mthumb-interwork -march=armv5te -mtune=arm946e-s
+SPECS		:= $(BLOCKSDS)/sys/crts/ds_arm9.specs
 
-export OFILES := $(PNGFILES:.png=.o) $(OFILES_BIN) $(OFILES_SOURCES)
+INCLUDEFLAGS	:= $(foreach path,$(INCLUDEDIRS),-I$(path)) \
+		   $(foreach path,$(LIBDIRS),-I$(path)/include)
 
-export HFILES := $(PNGFILES:.png=.h) $(addsuffix .h,$(subst .,_,$(BINFILES)))
+LIBDIRSFLAGS	:= $(foreach path,$(LIBDIRS),-L$(path)/lib)
 
-export INCLUDE  := $(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir))\
-                   $(foreach dir,$(LIBDIRS),-I$(dir)/include)\
-                   -I$(CURDIR)/$(BUILD)
-export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+ASFLAGS		+= -x assembler-with-cpp $(DEFINES) $(INCLUDEFLAGS) \
+		   $(ARCH) -ffunction-sections -fdata-sections -specs=$(SPECS)
 
-.PHONY: $(BUILD) clean
+CFLAGS		+= -std=gnu17 -Wall $(DEFINES) $(INCLUDEFLAGS) \
+		   $(ARCH) -O2 -ffunction-sections -fdata-sections -specs=$(SPECS)
 
-#---------------------------------------------------------------------------------
-all: $(BUILD)
+CXXFLAGS	+= -std=gnu++14 -Wall $(DEFINES) $(INCLUDEFLAGS) \
+		   $(ARCH) -O2 -ffunction-sections -fdata-sections \
+		   -fno-rtti -fno-exceptions -specs=$(SPECS)
 
-$(LIBNCGC)/lib/libncgc.a: $(LIBNCGC)
-	@$(MAKE) PLATFORM=ntr -C $< fordka
+LDFLAGS		:= $(ARCH) $(LIBDIRSFLAGS) -Wl,-Map,$(MAP),--gc-sections $(DEFINES) \
+		   -Wl,--start-group $(LIBS) -lc -Wl,--end-group -specs=$(SPECS)
 
-$(BUILD): $(LIBNCGC)/lib/libncgc.a
-	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+OBJS_BIN	:= $(addsuffix .o,$(addprefix $(BUILDDIR)/,$(SOURCES_BIN)))
+HEADERS_BIN	:= $(addsuffix .h,$(subst .,_,$(addprefix $(BUILDDIR)/,$(SOURCES_BIN))))
 
-#---------------------------------------------------------------------------------
+OBJS_SOURCES	:= $(addsuffix .o,$(addprefix $(BUILDDIR)/,$(SOURCES_S))) \
+		   $(addsuffix .o,$(addprefix $(BUILDDIR)/,$(SOURCES_C))) \
+		   $(addsuffix .o,$(addprefix $(BUILDDIR)/,$(SOURCES_CPP)))
+
+OBJS		:= $(OBJS_BIN) $(OBJS_SOURCES)
+DEPS		:= $(OBJS_SOURCES:.o=.d)
+
+.PHONY: all clean
+
+all: $(ELF)
+
+$(LIBNCGC)/lib/libncgc.a:
+	@$(MAKE) PLATFORM=ntr -C $(LIBNCGC) fordka
+
+$(ELF): $(LIBNCGC)/lib/libncgc.a $(OBJS)
+	@echo "  LD.9    $@"
+	$(V)$(LD) -o $@ $(OBJS) $(LDFLAGS)
+
 clean:
-	@echo clean ...
-	@$(MAKE) clean -C $(LIBNCGC)
-	@rm -fr $(BUILD) $(TARGET)*.elf external/libncgc/lib
+	@echo "  CLEAN.9"
+	$(V)$(MAKE) clean -C $(LIBNCGC)
+	$(V)$(RM) $(ELF) $(MAP) $(BUILDDIR)
 
+$(BUILDDIR)/%.s.o : %.s
+	@echo "  AS.9    $<"
+	@$(MKDIR) -p $(@D)
+	$(V)$(CC) $(ASFLAGS) -c $< -o $@
 
-#---------------------------------------------------------------------------------
-else
+$(BUILDDIR)/%.c.o : %.c
+	@echo "  CC.9    $<"
+	@$(MKDIR) -p $(@D)
+	$(V)$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
-#---------------------------------------------------------------------------------
-# main targets
-#---------------------------------------------------------------------------------
-$(ARM9ELF) : $(OFILES)
-	@echo linking $(notdir $@)
-	@$(LD)  $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+$(BUILDDIR)/%.cpp.o : %.cpp
+	@echo "  CXX.9   $<"
+	@$(MKDIR) -p $(@D)
+	$(V)$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-#---------------------------------------------------------------------------------
-%.bin.o %_bin.h : %.bin
-#---------------------------------------------------------------------------------
-	@echo $(notdir $<)
-	@$(bin2o)
+# Rule for binary data files
+$(BUILDDIR)/%.bin.o: %.bin
+	@echo "  BIN.9   $<"
+	@$(MKDIR) -p $(@D)
+	$(V)$(BLOCKSDS)/tools/bin2c/bin2c $< $(@D)
+	$(V)$(CC) $(CFLAGS) -c $(BUILDDIR)/$*_bin.c -o $@
 
-#---------------------------------------------------------------------------------
-# This rule creates assembly source files using grit
-# grit takes an image file and a .grit describing how the file is to be processed
-# add additional rules like this for each image extension
-# you use in the graphics folders
-#---------------------------------------------------------------------------------
-%.s %.h: %.png %.grit
-#---------------------------------------------------------------------------------
-	grit $< -fts -o$*
-
--include $(DEPSDIR)/*.d
-
-#---------------------------------------------------------------------------------------
-endif
-#---------------------------------------------------------------------------------------
+-include $(DEPS)

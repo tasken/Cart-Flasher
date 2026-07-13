@@ -1,3 +1,0 @@
-[submodule "external/libncgc"]
-	path = arm9/external/libncgc
-	url = https://github.com/angelsl/libncgc

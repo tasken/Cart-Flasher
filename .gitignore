@@ -1,5 +1,6 @@
 *.elf
 *.nds
+*.map
 build.log
 .vscode
 .vs

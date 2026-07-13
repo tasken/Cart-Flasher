@@ -1,6 +1,6 @@
 #include "device.h"
 
-enum return_codes_t {ALL_OK, FAT_MOUNT_FAILED, FILE_OPEN_FAILED, FILE_IO_FAILED, FLASH_OP_FAILED};
+enum return_codes_t {ALL_OK, FAT_MOUNT_FAILED, FILE_OPEN_FAILED, FILE_IO_FAILED, FLASH_OP_FAILED, MEM_ALLOC_FAILED};
 
 return_codes_t mount_fat(void);
 return_codes_t unmount_fat(void);

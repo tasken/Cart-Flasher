@@ -10,17 +10,17 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm:20230622
-    name: Build with stable devkitARM using official Docker image
+    container: skylyrac/blocksds:slim-latest
+    env:
+      BLOCKSDS: /opt/wonderful/thirdparty/blocksds/core
+    name: Build with BlocksDS toolchain using official Docker image
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
-        with:
-          submodules: recursive
       - name: Build app
         id: build
         run: |
-          make CART_FLASHER_COMMIT=${{ github.ref_name }}
+          make CART_FLASHER_COMMIT=$(echo "${{ github.sha }}" | cut -c1-7) CART_FLASHER_VERSION=${{ github.ref_name }}
       - name: Upload cart_flasher.nds
         uses: AButler/upload-release-assets@v2.0
         with:

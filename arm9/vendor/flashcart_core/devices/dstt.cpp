@@ -355,7 +355,11 @@ public:
     DSTT() : Flashcart("DSTT", 0x10000) { }
 
     const char *getAuthor() { return "handsomematt"; }
-    const char *getDescription() { return "Works with:\n * Official DSTT\n * Most DSTT clones"; }
+    const char *getDescription() {
+        return "Works with:\n"
+               " * Official DSTT\n"
+               " * Most DSTT clones";
+    }
 
     bool initialize()
     {
