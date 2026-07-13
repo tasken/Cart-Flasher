@@ -3,19 +3,21 @@
 #include "ui.h"
 #define FONT_WIDTH  6
 #define FONT_HEIGHT 10
-#include "nds_platform.h" 
+#include "nds_platform.h"
 #include "device.h"
+#include "filebrowser.h"
 #include <ctime>
+#include <algorithm>
 
-#define bootmsg "\n WARNING: READ THIS BEFORE CONTINUING\n" 			\
-				" ------------------------------------\n\n" 			\
-				" If you don't know what you're doing: STOP\n" 			\
-				" Open your browser to https://3ds.guide/\n" 			\
-				" and follow the steps provided there.\n\n" 			\
-				" This software writes directly to your\n" 				\
-				" flashcart. It's possible you may BRICK \n"			\
-				" your flashcart.\n\n ALWAYS KEEP A BACKUP\n\n" 		\
-				" <A> CONTINUE  <B> POWEROFF"
+#define bootmsg "This tool writes directly to your\n" 					\
+				"flashcart's memory. If something\n" 					\
+				"interrupts a write (power loss,\n" 					\
+				"wrong file), your cart could stop\n" 					\
+				"working.\n\n" 											\
+				"It's nothing to worry about if\n" 					\
+				"you're careful: always keep a\n" 						\
+				"backup, and read each screen\n" 						\
+				"before confirming."
 
 using namespace flashcart_core;
 using namespace ncgc;
@@ -24,11 +26,19 @@ int global_loglevel = 1; //https://github.com/ntrteam/flashcart_core/blob/master
 
 void print_boot_msg(void)
 {
-	ClearScreen(TOP_SCREEN, COLOR_RED);
-	DrawString(TOP_SCREEN, 0, 0, COLOR_WHITE, bootmsg);
+	// Plain black + the same blue header bar every other screen uses, not a
+	// full alarm-red screen — this is a heads-up, not a hazard warning.
+	DrawHeader(TOP_SCREEN, "Before you continue", ((SCREENWIDTH - (strlen("Before you continue") * FONT_WIDTH)) / 2));
+	DrawString(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 2, COLOR_WHITE, bootmsg);
+	// Version info lives here, seen once at boot for bug reports, instead of
+	// permanently on the flashcart list where nobody needs it every session.
+	DrawStringF(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 13, COLOR_GREY, "Cart-Flasher %s", CART_FLASHER_VERSION);
+	DrawStringF(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 15, COLOR_GREY, "Developed by @tasken\nCommit: %s\nOriginal by jason0597 & DS-Homebrew", CART_FLASHER_COMMIT);
+	DrawString(TOP_SCREEN, FONT_WIDTH * 2, SCREENHEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Continue   <B> Power off");
 
 	while (true)
 	{
+		swiWaitForVBlank();
 		scanKeys();
 		if (keysDown() & KEY_B)
 		{
@@ -42,7 +52,7 @@ void print_boot_msg(void)
 }
 
 void WaitPress(u32 KEY) {
-	while (true) { scanKeys(); if (keysDown() & KEY) { break; } }
+	while (true) { swiWaitForVBlank(); scanKeys(); if (keysDown() & KEY) { break; } }
 }
 
 bool ntrCardReset()
@@ -69,31 +79,47 @@ bool ntrCardReset()
 	return true;
 }
 
-void menu_lvl1(Flashcart* cart, bool isDevMode)
+void menu_lvl1(Flashcart* cart)
 {
+	// Remove R4iSDHC.hk if not in DSi mode
+	if (!isDSiMode()) {
+		for (auto it = flashcart_list->begin(); it != flashcart_list->end(); ) {
+			if (strcmp((*it)->getShortName(), "R4iSDHC.hk") == 0) {
+				it = flashcart_list->erase(it);
+			} else {
+				++it;
+			}
+		}
+	}
+
+	// Sort alphabetically by name
+	std::sort(flashcart_list->begin(), flashcart_list->end(), [](Flashcart* a, Flashcart* b) {
+		return strcasecmp(a->getName(), b->getName()) < 0;
+	});
+
 	u32 menu_sel = 0;
 	
 	NTRCard card(ntrCardReset);
-	DrawHeader(TOP_SCREEN, "Select flashcart", ((SCREENWIDTH - (16 * FONT_WIDTH)) / 2));
-	DrawInfo(global_loglevel);
+	DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREENWIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2));
+	DrawFooter(global_loglevel);
 	DrawHeader(BOTTOM_SCREEN, "Flashcart info", ((SCREENWIDTH - (14 * FONT_WIDTH)) / 2));
 	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, "%s\n%s", flashcart_list->at(0)->getAuthor(), flashcart_list->at(0)->getDescription());
 	u32 flashcart_list_size = flashcart_list->size();
 
+	// Draw the list once up front; the loop below only redraws it when the
+	// selection or screen actually changes, instead of every single frame.
+	// (Every frame would mean redrawing full-width highlight-bar rectangles
+	// with no vsync, which tears visibly on real hardware.)
+	for (u32 i = 0; i < flashcart_list_size; i++)
+	{
+		DrawListRow(TOP_SCREEN, (i + 2) * FONT_HEIGHT, i == menu_sel, COLOR_ACCENT, flashcart_list->at(i)->getName());
+	}
+
 	while (true) //This will be our MAIN loop
 	{
+		swiWaitForVBlank();
 		bool reprintFlag = false;
 
-		for (u32 i = 0; i < flashcart_list_size; i++)
-		{
-			cart = flashcart_list->at(i);
-			if (!isDSiMode() && strcmp(cart->getShortName(), "R4iSDHC.hk") == 0) // R4iSDHC.hk only support init from RAW, so hide it on DSMode
-			{
-				flashcart_list_size--;
-				break; // because R4iSDHC.hk is the last one of flashcart_list
-			}
-			DrawString(TOP_SCREEN, FONT_WIDTH, ((i + 2) * FONT_HEIGHT), (i == menu_sel) ? COLOR_RED : COLOR_WHITE, cart->getName());
-		}
 		scanKeys();
 		if (keysDown() & KEY_DOWN && menu_sel < (flashcart_list_size - 1))
 		{
@@ -112,7 +138,7 @@ void menu_lvl1(Flashcart* cart, bool isDevMode)
 			else {
 				global_loglevel++;
 			}
-			DrawInfo(global_loglevel);
+			DrawFooter(global_loglevel);
 		}
 		if (keysDown() & KEY_A)
 		{
@@ -121,20 +147,25 @@ void menu_lvl1(Flashcart* cart, bool isDevMode)
 			else card.state(NTRState::Key2);
 			if (!cart->initialize(&card)) //If cart initialization fails, do all this and then break to main menu
 			{
-				DrawString(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, COLOR_RED, "Flashcart setup failed!\nPress <B>");
-				while (true) { scanKeys(); if (keysDown() & KEY_B) { DrawHeader(TOP_SCREEN, "Select flashcart", ((SCREENWIDTH - (16 * FONT_WIDTH)) / 2)); DrawInfo(global_loglevel); break; } }
+				DrawString(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, COLOR_RED, "Couldn't detect this flashcart.\nCheck it's inserted firmly, then\npress <B> to go back to the list.");
+				while (true) { scanKeys(); if (keysDown() & KEY_B) { DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREENWIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2)); DrawFooter(global_loglevel); break; } }
+				reprintFlag = true;
 			}
 			else
 			{
-				menu_lvl2(cart, isDevMode); //There is a while loop over at menu_lvl2(), the statements underneath won't get executed immediately
-				DrawHeader(TOP_SCREEN, "Select flashcart", ((SCREENWIDTH - (16 * FONT_WIDTH)) / 2));
-				DrawInfo(global_loglevel);
+				menu_lvl2(cart); //There is a while loop over at menu_lvl2(), the statements underneath won't get executed immediately
+				DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREENWIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2));
+				DrawFooter(global_loglevel);
 				reprintFlag = true;
 			}
 		}
 
 		if (reprintFlag)
 		{
+			for (u32 i = 0; i < flashcart_list_size; i++)
+			{
+				DrawListRow(TOP_SCREEN, (i + 2) * FONT_HEIGHT, i == menu_sel, COLOR_ACCENT, flashcart_list->at(i)->getName());
+			}
 			cart = flashcart_list->at(menu_sel);
 			DrawHeader(BOTTOM_SCREEN, "Flashcart info", ((SCREENWIDTH - (14 * FONT_WIDTH)) / 2));
 			DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, "%s\n%s", cart->getAuthor(), cart->getDescription());
@@ -142,82 +173,106 @@ void menu_lvl1(Flashcart* cart, bool isDevMode)
 	}
 }
 
-void menu_lvl2(Flashcart* cart, bool isDevMode)
+void menu_lvl2(Flashcart* cart)
 {
 	DrawHeader(TOP_SCREEN, cart->getName(), ((SCREENWIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
+	DrawString(TOP_SCREEN, 0, SCREENHEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <B> Back");
 	int menu_sel = 0;
+	bool dirty = true;
 
 	while (true)
 	{
-		scanKeys();
-		DrawString(TOP_SCREEN, FONT_WIDTH, (2 * FONT_HEIGHT), (menu_sel == 0) ? COLOR_RED : COLOR_WHITE, "Inject FIRM");	//0
-		DrawString(TOP_SCREEN, FONT_WIDTH, (3 * FONT_HEIGHT), (menu_sel == 1) ? COLOR_RED : COLOR_WHITE, "Dump flash");		//1
-		if(isDSiMode())
-		{
-			DrawString(TOP_SCREEN, FONT_WIDTH, (4 * FONT_HEIGHT), (menu_sel == 2) ? COLOR_RED : COLOR_WHITE, "Restore flash");	//2
+		swiWaitForVBlank();
+		// Only redraw the highlight-bar rows when the selection (or the screen
+		// underneath them) actually changed, not every single frame — redrawing
+		// full-width rectangles unconditionally with no vsync tears visibly.
+		if (dirty) {
+			DrawListRow(TOP_SCREEN, 2 * FONT_HEIGHT, menu_sel == 0, COLOR_ACCENT, "Back up flash");	//0
+			DrawListRow(TOP_SCREEN, 3 * FONT_HEIGHT, menu_sel == 1, COLOR_TINTEDRED, "Write flash");	//1
+			dirty = false;
 		}
 
-		if (keysDown() & KEY_DOWN && menu_sel < (isDSiMode() ? 2 : 1))
+		scanKeys();
+
+		if (keysDown() & KEY_DOWN && menu_sel < 1)
 		{
 			menu_sel++;
+			dirty = true;
 		}
 		if (keysDown() & KEY_UP   && menu_sel > 0)
 		{
 			menu_sel--;
+			dirty = true;
 		}
 		if (keysDown() & KEY_B)
 		{
 			break;
 		}
 		int ntrboot_return = 0;
-		
+
 		if (keysDown() & KEY_A)
 		{
-			DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (8 * FONT_HEIGHT), COLOR_WHITE, (menu_sel == 0) ? "About to inject FIRM!\nEnter button combination to proceed:" : "About to dump flash!\nEnter button combination to proceed:");
+			char writePath[512];
+			if (menu_sel == 1) {
+				if (!BrowseForFile("/", ".bin", writePath, sizeof(writePath))) {
+					DrawHeader(TOP_SCREEN, cart->getName(), ((SCREENWIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
+					DrawString(TOP_SCREEN, 0, SCREENHEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <B> Back");
+					dirty = true;
+					continue;
+				}
+				DrawHeader(TOP_SCREEN, cart->getName(), ((SCREENWIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
+			}
+
+			// The "<A> Select <B> Back" footer no longer applies once the button-combo
+			// prompt takes over input, so make sure that row is blank before showing it.
+			DrawRectangle(TOP_SCREEN, 0, SCREENHEIGHT - FONT_HEIGHT, SCREENWIDTH, FONT_HEIGHT, COLOR_BLACK);
+			DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (8 * FONT_HEIGHT), COLOR_WHITE, (menu_sel == 0) ?
+				"About to read a full backup from\nthis cart. Enter the button combo\nbelow to confirm:" :
+				"This will overwrite the cart's\nflash memory and can't be undone.\nEnter the combo below to confirm:");
 			if (d0k3_buttoncombo(10 * FONT_WIDTH, 12 * FONT_HEIGHT))
 			{
 				ClearScreen(BOTTOM_SCREEN, COLOR_BLACK);
 				if (menu_sel == 0) {
-					ntrboot_return = InjectFIRM(cart, isDevMode);
-				} else if (menu_sel == 1) {
 					ntrboot_return = DumpFlash(cart);
-				} else if (menu_sel == 2) {
-					ntrboot_return = RestoreFlash(cart);
+				} else if (menu_sel == 1) {
+					ntrboot_return = WriteFlash(cart, writePath);
 				}
 
 				switch (ntrboot_return) {
 					case FAT_MOUNT_FAILED:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, "Failed to mount fat!\nPress <B> to return to menu...");
+						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, "Couldn't access the SD card.\nMake sure it's inserted, then\npress <B> to go back.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case FILE_OPEN_FAILED:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, "Failed to open file!\nPress <B> to return to menu...");
+						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
+							"Couldn't create the backup file.\nCheck the SD card isn't full or\nlocked, then press <B> to go back." :
+							"Couldn't open that file.\nIt may have been moved or deleted.\nPress <B> to go back.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case FILE_IO_FAILED:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ? "Failed to read file!\nPress <B> to return to menu..." : "Failed to write file!\nPress <B> to return to menu...");
+						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
+							"Something went wrong writing the\nbackup file. Check the SD card has\nfree space, then press <B> to go back." :
+							"Something went wrong reading that\nfile, it may be damaged, or the\nSD card's loose. Press <B> to go back.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
-					case INJECT_OR_DUMP_FAILED:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ? "Failed to inject FIRM!\nPress <B> to return to menu..." : "Failed to dump flash!\nPress <B> to return to menu...");
-						WaitPress(KEY_B);
-						ClearScreen(TOP_SCREEN, COLOR_BLACK);
-						break;
-
-					case NO_BACKUP_FOUND:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, "No backup file found!\nMake sure you dumped the flash first!\nPress <B> to return to menu...");
+					case FLASH_OP_FAILED:
+						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
+							"Reading from the cart failed\npartway through. Try reseating it.\nPress <B> to return to the menu." :
+							"Writing to the cart failed\npartway through. Try reseating it.\nPress <B> to return to the menu.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case ALL_OK:
-						DrawString(TOP_SCREEN, (1 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_GREEN, "Success! Press <A> to return to main menu");
+						DrawString(TOP_SCREEN, (1 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_GREEN, (menu_sel == 0) ?
+							"Backup complete! Your dump was\nsaved. Press <A> to continue." :
+							"All done! Your flash was written\nsuccessfully. Press <A> to continue.");
 						WaitPress(KEY_A);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						ClearScreen(BOTTOM_SCREEN, COLOR_BLACK);
@@ -226,7 +281,7 @@ void menu_lvl2(Flashcart* cart, bool isDevMode)
 			}
 			else
 			{
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (14 * FONT_HEIGHT), COLOR_WHITE, "Stopped by user...\nPress <B> to return to main menu");
+				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (14 * FONT_HEIGHT), COLOR_WHITE, "No problem, nothing was touched.\nPress <B> to go back.");
 				WaitPress(KEY_B);
 			}
 			break;

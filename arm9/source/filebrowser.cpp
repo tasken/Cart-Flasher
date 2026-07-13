@@ -1,0 +1,211 @@
+#include "filebrowser.h"
+#include <nds.h>
+#define FONT_WIDTH  6
+#define FONT_HEIGHT 10
+#include "ui.h"
+#include "menu.h"
+#include "nds_platform.h"
+#include <dirent.h>
+#include <sys/stat.h>
+#include <cstring>
+#include <cstdio>
+#include <strings.h>
+#include <vector>
+#include <algorithm>
+
+namespace {
+
+struct FileEntry {
+	char name[256];
+	bool isDir;
+};
+
+bool HasExtensionCI(const char* name, const char* ext) {
+	size_t nameLen = strlen(name);
+	size_t extLen = strlen(ext);
+	if (extLen > nameLen) { return false; }
+	return strcasecmp(name + (nameLen - extLen), ext) == 0;
+}
+
+void PathJoin(char* dest, size_t destSize, const char* base, const char* name) {
+	if (strcmp(base, "/") == 0) {
+		snprintf(dest, destSize, "/%s", name);
+	} else {
+		snprintf(dest, destSize, "%s/%s", base, name);
+	}
+}
+
+void PathUp(char* path) {
+	if (strcmp(path, "/") == 0) { return; }
+	char* lastSlash = strrchr(path, '/');
+	if (lastSlash == path) {
+		path[1] = '\0';
+	} else {
+		*lastSlash = '\0';
+	}
+}
+
+void ListDirectory(const char* path, const char* ext, std::vector<FileEntry>& outEntries) {
+	outEntries.clear();
+
+	std::vector<FileEntry> real;
+	DIR* dir = opendir(path);
+	if (dir) {
+		struct dirent* ent;
+		while ((ent = readdir(dir)) != nullptr) {
+			if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) { continue; }
+
+			char fullPath[512];
+			PathJoin(fullPath, sizeof(fullPath), path, ent->d_name);
+
+			struct stat st;
+			if (stat(fullPath, &st) != 0) { continue; }
+			bool isDir = S_ISDIR(st.st_mode);
+			if (!isDir && !HasExtensionCI(ent->d_name, ext)) { continue; }
+
+			FileEntry fe;
+			strncpy(fe.name, ent->d_name, sizeof(fe.name) - 1);
+			fe.name[sizeof(fe.name) - 1] = '\0';
+			fe.isDir = isDir;
+			real.push_back(fe);
+		}
+		closedir(dir);
+	}
+
+	std::sort(real.begin(), real.end(), [](const FileEntry& a, const FileEntry& b) {
+		if (a.isDir != b.isDir) { return a.isDir; }
+		return strcasecmp(a.name, b.name) < 0;
+	});
+
+	if (strcmp(path, "/") != 0) {
+		FileEntry up;
+		strcpy(up.name, "..");
+		up.isDir = true;
+		outEntries.push_back(up);
+	}
+	outEntries.insert(outEntries.end(), real.begin(), real.end());
+}
+
+void RenderList(const char* currentPath, const std::vector<FileEntry>& entries, int cursor, int scrollTop, int visibleCount) {
+	DrawHeader(TOP_SCREEN, "Pick a file to write", ((SCREENWIDTH - (strlen("Pick a file to write") * FONT_WIDTH)) / 2));
+
+	const int maxPathChars = SCREENWIDTH / FONT_WIDTH;
+	char pathDisplay[64];
+	int pathLen = strlen(currentPath);
+	if (pathLen > maxPathChars) {
+		snprintf(pathDisplay, sizeof(pathDisplay), "...%s", currentPath + pathLen - (maxPathChars - 3));
+	} else {
+		snprintf(pathDisplay, sizeof(pathDisplay), "%s", currentPath);
+	}
+	DrawString(TOP_SCREEN, 0, FONT_HEIGHT, COLOR_GREY, pathDisplay);
+
+	const int maxNameChars = (SCREENWIDTH / FONT_WIDTH) - 2;
+	for (int i = 0; i < visibleCount; i++) {
+		int idx = scrollTop + i;
+		if (idx >= (int)entries.size()) { break; }
+		const FileEntry& e = entries[idx];
+		int y = FONT_HEIGHT * (2 + i);
+
+		char display[64];
+		int nameLen = strlen(e.name);
+		if (nameLen > maxNameChars) {
+			snprintf(display, sizeof(display), "%.*s~%s", maxNameChars - 2, e.name, e.isDir ? "/" : "");
+		} else {
+			snprintf(display, sizeof(display), "%s%s", e.name, e.isDir ? "/" : "");
+		}
+		DrawListRow(TOP_SCREEN, y, idx == cursor, COLOR_ACCENT, display);
+	}
+
+	bool hasParentEntry = !entries.empty() && strcmp(entries[0].name, "..") == 0;
+	bool hasRealEntries = entries.size() > (hasParentEntry ? 1u : 0u);
+	if (!hasRealEntries) {
+		int emptyMsgY = FONT_HEIGHT * (2 + (hasParentEntry ? 1 : 0));
+		DrawString(TOP_SCREEN, FONT_WIDTH, emptyMsgY, COLOR_GREY, "No .bin files in this folder yet.");
+	}
+
+	DrawString(TOP_SCREEN, 0, SCREENHEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Open/Pick file   <B> Back");
+}
+
+} // namespace
+
+bool BrowseForFile(const char* startPath, const char* ext, char* outPath, size_t outPathSize) {
+	if (mount_fat() != ALL_OK) {
+		DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, "Couldn't access the SD card.\nMake sure it's inserted, then\npress <B> to go back.");
+		WaitPress(KEY_B);
+		return false;
+	}
+
+	char currentPath[512];
+	strncpy(currentPath, startPath, sizeof(currentPath) - 1);
+	currentPath[sizeof(currentPath) - 1] = '\0';
+
+	std::vector<FileEntry> entries;
+	ListDirectory(currentPath, ext, entries);
+
+	int cursor = 0;
+	int scrollTop = 0;
+	const int visibleCount = (SCREENHEIGHT - FONT_HEIGHT * 3) / FONT_HEIGHT;
+	bool dirty = true;
+	bool result = false;
+
+	while (true) {
+		swiWaitForVBlank();
+		if (dirty) {
+			RenderList(currentPath, entries, cursor, scrollTop, visibleCount);
+			dirty = false;
+		}
+
+		scanKeys();
+		u32 keys = keysDown();
+
+		if (keys & KEY_DOWN && cursor < (int)entries.size() - 1) {
+			cursor++;
+			if (cursor >= scrollTop + visibleCount) { scrollTop = cursor - visibleCount + 1; }
+			dirty = true;
+		}
+		if (keys & KEY_UP && cursor > 0) {
+			cursor--;
+			if (cursor < scrollTop) { scrollTop = cursor; }
+			dirty = true;
+		}
+		if (keys & KEY_B) {
+			if (strcmp(currentPath, "/") == 0) {
+				result = false;
+				break;
+			}
+			PathUp(currentPath);
+			ListDirectory(currentPath, ext, entries);
+			cursor = 0;
+			scrollTop = 0;
+			dirty = true;
+		}
+		if (keys & KEY_A && !entries.empty()) {
+			const FileEntry sel = entries[cursor];
+			if (strcmp(sel.name, "..") == 0) {
+				PathUp(currentPath);
+				ListDirectory(currentPath, ext, entries);
+				cursor = 0;
+				scrollTop = 0;
+				dirty = true;
+			} else if (sel.isDir) {
+				char newPath[512];
+				PathJoin(newPath, sizeof(newPath), currentPath, sel.name);
+				strncpy(currentPath, newPath, sizeof(currentPath) - 1);
+				currentPath[sizeof(currentPath) - 1] = '\0';
+				ListDirectory(currentPath, ext, entries);
+				cursor = 0;
+				scrollTop = 0;
+				dirty = true;
+			} else {
+				char fullPath[512];
+				PathJoin(fullPath, sizeof(fullPath), currentPath, sel.name);
+				snprintf(outPath, outPathSize, "%s", fullPath);
+				result = true;
+				break;
+			}
+		}
+	}
+
+	unmount_fat();
+	return result;
+}

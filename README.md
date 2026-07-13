@@ -1,4 +1,20 @@
-# ntrboot_flasher_nds
-A NDS NTRBoot flasher to flash 3DS FIRMs to your DS flashcart
+<p align="center">
+  <img src="resources/logo.png" alt="Cart-Flasher Logo" width="128">
+</p>
 
-To compile, clone the repository (don't forget the submodules!), and simply run `make`.
+# Cart-Flasher
+**Developed by @tasken**
+
+A DS/DSi homebrew app to dump and write raw flash images to/from your DS flashcart.
+
+To compile, clone the repository (don't forget the submodule!), and simply run `make`. A Docker-based build is also available via `./build.sh` if you don't have devkitARM installed locally.
+
+## Credits
+
+Cart-Flasher is repurposed as a general-purpose flashcart dump/write tool, built on top of the following projects:
+*   [ntrboot_flasher_nds](https://github.com/jason0597/ntrboot_flasher_nds) by jason0597 (original project)
+*   [ntrboot_flasher_nds](https://github.com/DS-Homebrew/ntrboot_flasher_nds) by DS-Homebrew (enhanced fork)
+*   [flashcart_core](https://github.com/ntrteam/flashcart_core) by ntrteam, for the per-flashcart device drivers
+*   [libncgc](https://github.com/angelsl/libncgc) by angelsl, for the NTR/CTR card protocol layer
+
+The button-combo confirmation before any destructive flash operation is styled after GodMode9/SafeMode9's `d0k3` prompt.

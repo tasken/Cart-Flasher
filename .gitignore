@@ -1,8 +1,11 @@
 *.elf
 *.nds
+build.log
 .vscode
 .vs
 build/
 maker.sh
 *.DS_Store
 *._
+__pycache__/
+*.pyc

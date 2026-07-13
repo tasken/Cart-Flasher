@@ -30,7 +30,8 @@ ARCH := -marm -mthumb-interwork -march=armv5te -mtune=arm946e-s
 
 CFLAGS   := -g -Wall -O3\
             $(ARCH) $(INCLUDE) -DARM9 \
-			-DNTRBOOT_FLASHER_NDS_VERSION=\"$(NTRBOOT_FLASHER_NDS_VERSION)\"\
+			-DCART_FLASHER_VERSION=\"$(CART_FLASHER_VERSION)\"\
+			-DCART_FLASHER_COMMIT=\"$(CART_FLASHER_COMMIT)\"\
 			-DFLASHCART_CORE_VERSION=\"$(FLASHCART_CORE_VERSION)\"\
 			-DNCGC_PLATFORM_NTR
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
@@ -69,8 +70,14 @@ export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))\
 
 export DEPSDIR := $(CURDIR)/$(BUILD)
 
-export NTRBOOT_FLASHER_NDS_VERSION := $(shell git describe --always --tags)
-export FLASHCART_CORE_VERSION := $(shell git -C external/flashcart_core describe --always --tags)
+CART_FLASHER_VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.1-alpha")
+CART_FLASHER_COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+export CART_FLASHER_VERSION
+export CART_FLASHER_COMMIT
+# flashcart_core is vendored (no longer a submodule), so there's no separate repo
+# to `git describe` here. This records the snapshot it was imported from; bump it
+# by hand if you resync from upstream or make substantial local changes to it.
+export FLASHCART_CORE_VERSION := v1.1.0-1-gb20f7f6-vendored
 
 CFILES   := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES := $(filter-out example.cpp, $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp))))

@@ -48,11 +48,12 @@ void DrawRectangle(u16 *screen, int x, int y, int width, int height, u16 color);
 void DrawCharacter(u16 *screen, int character, int x, int y, u16 color);
 void DrawString(u16 *screen, int x, int y, u16 color, const char *str);
 void DrawStringF(u16 *screen, int x, int y, u16 color, const char *format, ...);
+void DrawListRow(u16 *screen, int y, bool selected, u16 highlightColor, const char *text);
 
 void SetProgressOverride(uint32_t current, uint32_t total);
 void ShowProgress(u16 *screen, uint32_t current, uint32_t total, const char* status);
 void DrawHeader(u16* screen, const char *str, int offset);
-void DrawInfo(int loglevel);
+void DrawFooter(int loglevel);
 
 extern int global_loglevel; //Because ui.h is included in all .cpp files, we can share this variable around where it's needed
 //We declare it as extern here, we declare it again in menu.cpp where it's primarily used, and then we can access it

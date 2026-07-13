@@ -15,7 +15,10 @@ else
 $(error "Python not found in PATH, please install it.")
 endif
 
-export TARGET := $(shell basename $(CURDIR))
+export TARGET := cart_flasher
+CART_FLASHER_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+export CART_FLASHER_COMMIT
+export NDS_OUT := $(TARGET)-$(CART_FLASHER_COMMIT).nds
 export TOPDIR := $(CURDIR)
 
 # specify a directory which contains the nitro filesystem
@@ -23,9 +26,9 @@ export TOPDIR := $(CURDIR)
 NITRO_FILES :=
 
 # These set the information text in the nds file
-GAME_TITLE     := ntrboot flasher NDS
+GAME_TITLE     := Cart-Flasher
 #GAME_SUBTITLE  := built with devkitARM
-GAME_AUTHOR    := jason0597 and DS-Homebrew
+GAME_AUTHOR    := @tasken
 
 GAME_BANNER := banner.bin
 
@@ -42,7 +45,7 @@ include $(DEVKITARM)/ds_rules
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
-all: checkarm7 checkarm9 $(TARGET).nds
+all: checkarm7 checkarm9 $(NDS_OUT)
 
 #---------------------------------------------------------------------------------
 checkarm7:
@@ -53,11 +56,10 @@ checkarm9:
 	$(MAKE) -C arm9
 
 #---------------------------------------------------------------------------------
-$(TARGET).nds : $(NITRO_FILES) arm7/$(TARGET).elf arm9/$(TARGET).elf
-	ndstool	-c $(TARGET).nds -7 arm7/$(TARGET).elf -9 arm9/$(TARGET).elf \
-		-b $(GAME_ICON) "$(GAME_FULL_TITLE)" \
+$(NDS_OUT) : $(NITRO_FILES) arm7/$(TARGET).elf arm9/$(TARGET).elf
+	ndstool	-c $(NDS_OUT) -7 arm7/$(TARGET).elf -9 arm9/$(TARGET).elf \
+		-t banner.bin \
 		$(_ADDFILES)
-	$(SILENTCMD)$(PYTHON) animatedbannerpatch.py $@ banner.bin
 
 #---------------------------------------------------------------------------------
 arm7/$(TARGET).elf:
@@ -71,4 +73,4 @@ arm9/$(TARGET).elf:
 clean:
 	$(MAKE) -C arm9 clean
 	$(MAKE) -C arm7 clean
-	rm -f $(TARGET).nds
+	rm -f $(TARGET)-*.nds

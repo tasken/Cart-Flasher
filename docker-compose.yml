@@ -1,0 +1,6 @@
+services:
+  builder:
+    build: .
+    volumes:
+      - .:/work
+    command: sh -c "make clean && make"

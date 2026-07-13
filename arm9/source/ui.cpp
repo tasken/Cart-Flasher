@@ -86,11 +86,25 @@ void DrawHeader(u16* screen, const char *str, int offset)
 	DrawString(screen, offset, 0, COLOR_WHITE, str);
 }
 
-void DrawInfo(int loglevel)
+// Draws a single selectable list row: a full-width highlight bar behind the
+// text when selected, so focus is obvious at a glance instead of relying on
+// a text-color change alone. Always redraws the row's background so a
+// previously-highlighted row doesn't leave a stray colored bar behind when
+// the selection moves.
+void DrawListRow(u16 *screen, int y, bool selected, u16 highlightColor, const char *text)
 {
-	DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT * 3, SCREEN_WIDTH, FONT_HEIGHT * 3, COLOR_LIGHTGREY);
-	DrawStringF(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT * 3, COLOR_BLACK, "ntrboot_flasher_nds: %s\nflashcart_core: %s", NTRBOOT_FLASHER_NDS_VERSION, FLASHCART_CORE_VERSION);
-	DrawString(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_BLACK, "<Y> Change log level");
+	DrawRectangle(screen, 0, y, SCREENWIDTH, FONT_HEIGHT, selected ? highlightColor : COLOR_BLACK);
+	DrawString(screen, FONT_WIDTH, y, selected ? COLOR_BLACK : COLOR_WHITE, text);
+}
+
+// A single plain-text footer line, matching the button-hint style used on
+// every other screen. No end user needs to see the app/submodule version or
+// a permanently-visible log-level readout on the main flashcart list — that
+// used to eat 3 rows (~15% of the screen) in a solid grey box. Version info
+// now lives on the boot screen instead (seen once, not on every frame).
+void DrawFooter(int loglevel)
+{
+	DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
 	const char *loglevel_str;
 	//I use a bunch of if statements here because the array that has strings over at ntrboot_flasher's `platform.cpp` is not available here
 	if (loglevel == 0) { loglevel_str = "DEBUG"; }
@@ -98,7 +112,7 @@ void DrawInfo(int loglevel)
 	if (loglevel == 2) { loglevel_str = "NOTICE"; }
 	if (loglevel == 3) { loglevel_str = "WARN"; }
 	if (loglevel == 4) { loglevel_str = "ERROR"; }
-	DrawStringF(TOP_SCREEN, SCREEN_WIDTH - FONT_WIDTH * 17, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_BLACK, "Log level: %s", loglevel_str);
+	DrawStringF(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <Y> Log: %s", loglevel_str);
 }
 
 void DrawStringF(u16 *screen, int x, int y, u16 color, const char *format, ...)
@@ -157,6 +171,7 @@ void ShowProgress(u16 *screen, uint32_t current, uint32_t total, const char* sta
 	uint32_t prog_width = ((total > 0) && (current <= total)) ? (current * (bar_width - 4)) / total : 0;
 	uint32_t prog_percent = ((total > 0) && (current <= total)) ? (current * 100) / total : 0;
 
+	DrawRectangle(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, bar_width, FONT_HEIGHT, STD_COLOR_BG);
 	DrawString(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, STD_COLOR_FONT, status);
 
 	// draw the initial outline
