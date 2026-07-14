@@ -1,0 +1,97 @@
+name: Bug report
+description: Report a problem with Cart-Flasher
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If this is an issue with a specific flashcart (e.g. requesting support for one), please don't file it here — open it on [ntrteam/flashcart_core](https://github.com/ntrteam/flashcart_core) instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: To reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Select '...'
+        3. Press '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots / log output
+      description: |
+        If applicable, add a photo/screenshot of the error screen. If the issue happens during cart detection or a flash operation, raise the in-app log level (press **Y** on the flashcart-selection screen) and include what's shown at the bottom of the screen — this is usually the fastest way to pin down the actual failure.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: console
+    attributes:
+      label: Console
+      options:
+        - DS / DS Lite
+        - DSi / DSi XL
+        - 3DS family (in DS mode)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: launcher
+    attributes:
+      label: Launched via
+      placeholder: e.g. ntrboot, TWiLight Menu++, an R4-family loader
+    validations:
+      required: true
+
+  - type: dropdown
+    id: flashcart
+    attributes:
+      label: Flashcart
+      options:
+        - Ace3DS Plus
+        - AK2i
+        - DSTT
+        - R4iSDHC family
+        - R4i Gold 3DS
+        - Other / clone / bootleg
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Cart-Flasher version/commit
+      description: Shown on the flashcart-selection screen, or the filename of the .nds you're using.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here.
+    validations:
+      required: false
