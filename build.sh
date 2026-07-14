@@ -28,7 +28,14 @@ case "$1" in
 esac
 
 echo "=== $MSG ==="
-echo "Running: sudo docker compose run --rm --build builder sh -c \"$CMD\" (log: $BUILD_LOG)"
+# Resolve the real invoking user's UID/GID, not the shell's current one:
+# when this whole script is run as `sudo ./build.sh`, `id -u`/`id -g` at this
+# point would already report 0:0 (root), silently defeating --user below.
+# sudo exports SUDO_UID/SUDO_GID for exactly this case; fall back to id for a
+# plain (non-sudo) invocation.
+BUILD_UID="${SUDO_UID:-$(id -u)}"
+BUILD_GID="${SUDO_GID:-$(id -g)}"
+echo "Running: sudo docker compose run --rm --build --user \"$BUILD_UID:$BUILD_GID\" builder sh -c \"$CMD\" (log: $BUILD_LOG)"
 echo ""
 # Remove any stale log from a previous run before tee opens a fresh one. Doing
 # this here (not in the Makefile's `clean` target) matters: that target runs
@@ -38,4 +45,10 @@ echo ""
 # it, but the file vanishes entirely once the pipeline finishes and tee closes
 # its handle.
 rm -f "$BUILD_LOG"
-sudo docker compose run --rm --build builder sh -c "$CMD" 2>&1 | tee "$BUILD_LOG"
+# --user matches the container to the host UID/GID: docker-compose.yml has no
+# `user:` directive, so without this the container runs as the base image's
+# default (root), and every build artifact it writes into the bind-mounted
+# .:/work (obj/, out/, .elf/.nds outputs) ends up root-owned on the host --
+# blocking any later non-sudo command (e.g. the host-side PLATFORM=test build)
+# from touching those files without another sudo call.
+sudo docker compose run --rm --build --user "$BUILD_UID:$BUILD_GID" builder sh -c "$CMD" 2>&1 | tee "$BUILD_LOG"
