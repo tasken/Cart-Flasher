@@ -8,15 +8,18 @@
 #include <cstdio>
 #include <cstdlib> // rand(); the seed itself lives in main()
 
+// Wording follows Sanras's flashcart guide, which documents this tool: its
+// terms are "flashrom" (not flash/memory), "key combo", "bricked", and "NDS".
+// The `Back up flash` / `Write flash` menu labels are quoted verbatim by that
+// guide, so they must not be reworded.
 #define bootmsg "This tool writes directly to your\n" 					\
-				"flashcart's memory. If something\n" 					\
-				"interrupts a write (power loss,\n" 					\
-				"wrong file), your cart could stop\n" 					\
-				"working.\n\n" 											\
-				"It's nothing to worry about if\n" 					\
-				"you're careful: always keep a\n" 						\
-				"backup, and read each screen\n" 						\
-				"before confirming."
+				"flashcart's flashrom. A bad write\n" 					\
+				"can brick your cart, so always keep\n" 				\
+				"a backup first.\n\n" 									\
+				"Not every cart has been tested. If\n" 					\
+				"you can't dump your cart's flashrom,\n" 				\
+				"or the dump is nonsense, STOP and\n" 					\
+				"open a GitHub issue."
 
 using namespace flashcart_core;
 using namespace ncgc;
@@ -265,16 +268,20 @@ void menu_lvl2(Flashcart* cart)
 			bool confirmed;
 			if (menu_sel == 0)
 			{
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (8 * FONT_HEIGHT), COLOR_WHITE,
-					"About to read a full backup from\nthis cart.");
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (12 * FONT_HEIGHT), COLOR_YELLOW, "<A> Start backup   <B> Cancel");
+				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (6 * FONT_HEIGHT), COLOR_WHITE,
+					"Dumping this cart's flashrom to\n/cart-backups on your SD card.\n\nNothing is written to the cart.\n\nIf it fails, or the dump is\nnonsense, STOP and open a GitHub\nissue.");
+				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_YELLOW, "<A> Start backup   <B> Cancel");
 				confirmed = WaitConfirm();
 			}
 			else
 			{
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (8 * FONT_HEIGHT), COLOR_WHITE,
-					"This will overwrite the cart's\nflash memory and can't be undone.\nEnter the combo below to confirm:");
-				confirmed = d0k3_buttoncombo(10 * FONT_WIDTH, 12 * FONT_HEIGHT);
+				// The banner/icon note lives only on the write path: restoring an
+				// untouched dump leaves the banner byte-identical, so it can't
+				// break stock DSi/3DS loading.
+				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (5 * FONT_HEIGHT), COLOR_WHITE,
+					"This overwrites the cart's flashrom\nand can't be undone.\n\nA changed icon or banner is blocked\nby stock DSi/3DS firmware unless CFW\nis installed. NDS/DS Lite are fine.");
+				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (12 * FONT_HEIGHT), COLOR_YELLOW, "Enter the key combo to confirm:");
+				confirmed = d0k3_buttoncombo(10 * FONT_WIDTH, 14 * FONT_HEIGHT);
 			}
 
 			if (confirmed)
