@@ -24,7 +24,7 @@ This builds inside Docker (BlocksDS toolchain included) and produces `cart_flash
 
 ## Credits
 
-*   Developed by `tasken`
+*   Developed by `Tasken` (`Nimbo` on Discord)
 *   Upstream base: repurposed as a general-purpose flashcart dump/write tool, built on top of:
     *   [ntrboot_flasher_nds](https://github.com/jason0597/ntrboot_flasher_nds) by `jason0597` (original project)
     *   [ntrboot_flasher_nds](https://github.com/DS-Homebrew/ntrboot_flasher_nds) by `DS-Homebrew` (enhanced fork)
