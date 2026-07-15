@@ -22,10 +22,16 @@ jobs:
         uses: actions/checkout@v6
       - name: Build app
         id: build
+        # NDS_OUT is pinned so CI filenames are always cart_flasher-<commit>.nds;
+        # the Makefile's branch-name suffix is for local builds only.
         run: |
-          make CART_FLASHER_COMMIT=$(echo "${{ github.sha }}" | cut -c1-7) CART_FLASHER_VERSION=nightly
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          make NDS_OUT=cart_flasher-$SHORT_SHA.nds CART_FLASHER_COMMIT=$SHORT_SHA CART_FLASHER_VERSION=nightly
       - name: Publish build to GH Actions
         uses: actions/upload-artifact@v6
         with:
-          path: cart_flasher-nightly.nds
+          # Keep the hash in the filename so downloaded nightlies identify
+          # their commit.
+          path: cart_flasher-*.nds
           name: cart_flasher-nightly
+          if-no-files-found: error
