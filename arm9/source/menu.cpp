@@ -334,13 +334,9 @@ void menu_lvl2(Flashcart* cart)
 						break;
 					}
 			}
-			else if (menu_sel == 1)
-			{
-				// Only worth saying when the combo was mistyped. On the backup
-				// screen <B> *is* the cancel key, so asking for it again is noise.
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (14 * FONT_HEIGHT), COLOR_WHITE, "No problem, nothing was touched.\nPress <B> to go back.");
-				WaitPress(KEY_B);
-			}
+			// No "nothing was touched" screen on the way out: <B> is the cancel
+			// key on both prompts, so the user already knows they backed out.
+			// A mistyped combo says its piece in the retry loop above.
 			break;
 		}
 	}
@@ -395,7 +391,27 @@ bool d0k3_buttoncombo(int cur_c, int cur_r)
 			else if (keysDown() & KEY_B) {
 				return false;
 			}
+			else if (depth > 0 && (keysDown() & check_rancombo[depth - 1])) {
+				// Re-pressing the button that was just accepted is a double-tap,
+				// not a mistake, so don't punish it. GodMode9 forgives the same
+				// case (ui.c: `!(pad_state & sequence[lvl-1])`). Unambiguous
+				// because no symbol repeats back-to-back, and it only suppresses
+				// a reset -- it never advances the combo.
+			}
 			else {
+				// Say what went wrong instead of silently rewinding to depth 0 --
+				// GodMode9 resets in place, but a combo that quietly restarts
+				// looks identical to one that isn't registering presses at all.
+				// The combo itself is NOT re-rolled: it was generated once above,
+				// so a retry redraws the same glyphs in place and asks the user
+				// for attention, not for memory.
+				//
+				// The message goes two rows under the combo so it keeps its blank
+				// separator wherever the caller placed it.
+				const int msg_r = cur_r + (2 * FONT_HEIGHT);
+				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), msg_r, COLOR_RED, "Wrong key combo. <A> Retry <B> Cancel");
+				if (!WaitConfirm()) { return false; }
+				DrawRectangle(TOP_SCREEN, 0, msg_r, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
 				depth = 0;
 			}
 		}
