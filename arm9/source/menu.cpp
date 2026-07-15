@@ -149,8 +149,22 @@ void menu_lvl1(Flashcart* cart)
 		if (keysDown() & KEY_A)
 		{
 			cart = flashcart_list->at(menu_sel); //Set the cart equal to whatever we had selected from before
-			if (isDSiMode() || strcmp(cart->getShortName(), "DSTT") == 0) card.init();
-			else card.state(NTRState::Key2);
+			if (isDSiMode() || strcmp(cart->getShortName(), "DSTT") == 0) {
+				// init() is __ncgc_must_check. Not fatal on its own -- initialize()
+				// below fails too and shows the detection error -- but the reason
+				// only exists here, so log it rather than discarding it. Turning on
+				// DEBUG then re-trying is the whole diagnostic workflow.
+				const Err err = card.init();
+				if (err) {
+					platform::logMessage(LOG_ERR, "menu: card.init failed: %s", err.desc());
+				}
+			} else {
+				// DS mode, non-DSTT: assume the cart's own menu already took the
+				// card through KEY1 and left it in KEY2, so just record that state
+				// without redoing the handshake. Launching via nds-bootstrap breaks
+				// the assumption -- detection then fails with no KEY2 to inherit.
+				card.state(NTRState::Key2);
+			}
 			if (!cart->initialize(&card)) //If cart initialization fails, do all this and then break to main menu
 			{
 				DrawString(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, COLOR_RED, "Couldn't detect this flashcart.\nCheck it's inserted firmly, then\npress <B> to go back to the list.");
