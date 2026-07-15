@@ -1,8 +1,6 @@
 #include "menu.h"
 #include <nds.h>
 #include "ui.h"
-#define FONT_WIDTH  6
-#define FONT_HEIGHT 10
 #include "nds_platform.h"
 #include "device.h"
 #include "filebrowser.h"
@@ -31,7 +29,7 @@ void print_boot_msg(void)
 	// full alarm-red screen — this is a heads-up, not a hazard warning.
 	char header_title[64];
 	sprintf(header_title, "Cart-Flasher %s", CART_FLASHER_VERSION);
-	DrawHeader(TOP_SCREEN, header_title, ((SCREENWIDTH - (strlen(header_title) * FONT_WIDTH)) / 2));
+	DrawHeader(TOP_SCREEN, header_title, ((SCREEN_WIDTH - (strlen(header_title) * FONT_WIDTH)) / 2));
 	DrawString(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 2, COLOR_WHITE, bootmsg);
 	// Spacing of 1 empty line after welcome message. A/B instructions at row 13.
 	DrawString(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 13, COLOR_YELLOW, "<A> Continue   <B> Power off");
@@ -102,9 +100,9 @@ void menu_lvl1(Flashcart* cart)
 	u32 menu_sel = 0;
 	
 	NTRCard card(ntrCardReset);
-	DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREENWIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2));
+	DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREEN_WIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2));
 	DrawFooter(global_loglevel);
-	DrawHeader(BOTTOM_SCREEN, "Flashcart info", ((SCREENWIDTH - (14 * FONT_WIDTH)) / 2));
+	DrawHeader(BOTTOM_SCREEN, "Flashcart info", ((SCREEN_WIDTH - (14 * FONT_WIDTH)) / 2));
 	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, "%s\n\n%s", flashcart_list->at(0)->getAuthor(), flashcart_list->at(0)->getDescription());
 	u32 flashcart_list_size = flashcart_list->size();
 
@@ -156,13 +154,13 @@ void menu_lvl1(Flashcart* cart)
 			if (!cart->initialize(&card)) //If cart initialization fails, do all this and then break to main menu
 			{
 				DrawString(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, COLOR_RED, "Couldn't detect this flashcart.\nCheck it's inserted firmly, then\npress <B> to go back to the list.");
-				while (true) { scanKeys(); if (keysDown() & KEY_B) { DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREENWIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2)); DrawFooter(global_loglevel); break; } }
+				while (true) { scanKeys(); if (keysDown() & KEY_B) { DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREEN_WIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2)); DrawFooter(global_loglevel); break; } }
 				reprintFlag = true;
 			}
 			else
 			{
 				menu_lvl2(cart); //There is a while loop over at menu_lvl2(), the statements underneath won't get executed immediately
-				DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREENWIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2));
+				DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREEN_WIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2));
 				DrawFooter(global_loglevel);
 				reprintFlag = true;
 			}
@@ -175,7 +173,7 @@ void menu_lvl1(Flashcart* cart)
 				DrawListRow(TOP_SCREEN, (i + 2) * FONT_HEIGHT, i == menu_sel, COLOR_ACCENT, flashcart_list->at(i)->getName());
 			}
 			cart = flashcart_list->at(menu_sel);
-			DrawHeader(BOTTOM_SCREEN, "Flashcart info", ((SCREENWIDTH - (14 * FONT_WIDTH)) / 2));
+			DrawHeader(BOTTOM_SCREEN, "Flashcart info", ((SCREEN_WIDTH - (14 * FONT_WIDTH)) / 2));
 			DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, "%s\n\n%s", cart->getAuthor(), cart->getDescription());
 		}
 	}
@@ -183,8 +181,8 @@ void menu_lvl1(Flashcart* cart)
 
 void menu_lvl2(Flashcart* cart)
 {
-	DrawHeader(TOP_SCREEN, cart->getName(), ((SCREENWIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
-	DrawString(TOP_SCREEN, 0, SCREENHEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <B> Back");
+	DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
+	DrawString(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <B> Back");
 	int menu_sel = 0;
 	bool dirty = true;
 
@@ -223,17 +221,17 @@ void menu_lvl2(Flashcart* cart)
 			char writePath[512];
 			if (menu_sel == 1) {
 				if (!BrowseForFile("/cart-backups", ".bin", writePath, sizeof(writePath))) {
-					DrawHeader(TOP_SCREEN, cart->getName(), ((SCREENWIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
-					DrawString(TOP_SCREEN, 0, SCREENHEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <B> Back");
+					DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
+					DrawString(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <B> Back");
 					dirty = true;
 					continue;
 				}
-				DrawHeader(TOP_SCREEN, cart->getName(), ((SCREENWIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
+				DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
 			}
 
 			// The "<A> Select <B> Back" footer no longer applies once the button-combo
 			// prompt takes over input, so make sure that row is blank before showing it.
-			DrawRectangle(TOP_SCREEN, 0, SCREENHEIGHT - FONT_HEIGHT, SCREENWIDTH, FONT_HEIGHT, COLOR_BLACK);
+			DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
 			DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (8 * FONT_HEIGHT), COLOR_WHITE, (menu_sel == 0) ?
 				"About to read a full backup from\nthis cart. Enter the button combo\nbelow to confirm:" :
 				"This will overwrite the cart's\nflash memory and can't be undone.\nEnter the combo below to confirm:");

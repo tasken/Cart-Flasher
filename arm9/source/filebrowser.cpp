@@ -1,7 +1,5 @@
 #include "filebrowser.h"
 #include <nds.h>
-#define FONT_WIDTH  6
-#define FONT_HEIGHT 10
 #include "ui.h"
 #include "menu.h"
 #include "nds_platform.h"
@@ -87,9 +85,9 @@ void ListDirectory(const char* path, const char* ext, std::vector<FileEntry>& ou
 }
 
 void RenderList(const char* currentPath, const std::vector<FileEntry>& entries, int cursor, int scrollTop, int visibleCount) {
-	DrawHeader(TOP_SCREEN, "Pick a file to write", ((SCREENWIDTH - (strlen("Pick a file to write") * FONT_WIDTH)) / 2));
+	DrawHeader(TOP_SCREEN, "Pick a file to write", ((SCREEN_WIDTH - (strlen("Pick a file to write") * FONT_WIDTH)) / 2));
 
-	const int maxPathChars = SCREENWIDTH / FONT_WIDTH;
+	const int maxPathChars = SCREEN_WIDTH / FONT_WIDTH;
 	char pathDisplay[64];
 	int pathLen = strlen(currentPath);
 	if (pathLen > maxPathChars) {
@@ -99,7 +97,7 @@ void RenderList(const char* currentPath, const std::vector<FileEntry>& entries, 
 	}
 	DrawString(TOP_SCREEN, 0, FONT_HEIGHT, COLOR_GREY, pathDisplay);
 
-	const int maxNameChars = (SCREENWIDTH / FONT_WIDTH) - 2;
+	const int maxNameChars = (SCREEN_WIDTH / FONT_WIDTH) - 2;
 	for (int i = 0; i < visibleCount; i++) {
 		int idx = scrollTop + i;
 		if (idx >= (int)entries.size()) { break; }
@@ -123,7 +121,7 @@ void RenderList(const char* currentPath, const std::vector<FileEntry>& entries, 
 		DrawString(TOP_SCREEN, FONT_WIDTH, emptyMsgY, COLOR_GREY, "No .bin files in this folder yet.");
 	}
 
-	DrawString(TOP_SCREEN, 0, SCREENHEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Open/Pick file   <B> Back");
+	DrawString(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Open/Pick file   <B> Back");
 }
 
 } // namespace
@@ -144,7 +142,7 @@ bool BrowseForFile(const char* startPath, const char* ext, char* outPath, size_t
 
 	int cursor = 0;
 	int scrollTop = 0;
-	const int visibleCount = (SCREENHEIGHT - FONT_HEIGHT * 3) / FONT_HEIGHT;
+	const int visibleCount = (SCREEN_HEIGHT - FONT_HEIGHT * 3) / FONT_HEIGHT;
 	bool dirty = true;
 	bool result = false;
 

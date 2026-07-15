@@ -24,11 +24,11 @@ void InitializeScreens(void) {
 }
 
 void setPixel(u16 *screen, int row, int col, u16 color) {
-	screen[row * SCREENWIDTH + col] = color | BIT(15);
+	screen[row * SCREEN_WIDTH + col] = color | BIT(15);
 }
 
 void ClearScreen(u16 *screen, u16 color) {
-	int width = SCREENHEIGHT * SCREENWIDTH;
+	int width = SCREEN_HEIGHT * SCREEN_WIDTH;
 	for (int i = 0; i < width; i++) {
 		screen[i] = color | BIT(15);
 	}
@@ -65,12 +65,12 @@ void DrawString(u16* screen, int x, int y, u16 color, const char *str)
 			y += FONT_HEIGHT;
 			continue;
 		}
-		if ((y + FONT_HEIGHT) > SCREENHEIGHT)
+		if ((y + FONT_HEIGHT) > SCREEN_HEIGHT)
 		{
 			break;
 		}
 
-		if ((x + FONT_WIDTH) > SCREENWIDTH)
+		if ((x + FONT_WIDTH) > SCREEN_WIDTH)
 		{
 			x = startx;
 			y += FONT_HEIGHT;
@@ -83,7 +83,7 @@ void DrawString(u16* screen, int x, int y, u16 color, const char *str)
 void DrawHeader(u16* screen, const char *str, int offset)
 {
 	ClearScreen(screen, COLOR_BLACK);
-	DrawRectangle(screen, 0, 0, SCREENWIDTH, FONT_HEIGHT, COLOR_BLUE);
+	DrawRectangle(screen, 0, 0, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLUE);
 	DrawString(screen, offset, 0, COLOR_WHITE, str);
 }
 
@@ -94,7 +94,7 @@ void DrawHeader(u16* screen, const char *str, int offset)
 // the selection moves.
 void DrawListRow(u16 *screen, int y, bool selected, u16 highlightColor, const char *text)
 {
-	DrawRectangle(screen, 0, y, SCREENWIDTH, FONT_HEIGHT, selected ? highlightColor : COLOR_BLACK);
+	DrawRectangle(screen, 0, y, SCREEN_WIDTH, FONT_HEIGHT, selected ? highlightColor : COLOR_BLACK);
 	DrawString(screen, FONT_WIDTH, y, selected ? COLOR_BLACK : COLOR_WHITE, text);
 }
 

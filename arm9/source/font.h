@@ -7,8 +7,8 @@
 #ifndef _font_h_
 #define _font_h_
 //---------------------------------------------------------------------------------
-#define FONT_WIDTH  6
-#define FONT_HEIGHT 10
+// This font's 6x10 metrics are FONT_WIDTH/FONT_HEIGHT in ui.h, which every
+// drawing caller already includes. Keep them in step if the font is swapped.
 //---------------------------------------------------------------------------------
 static const unsigned char font[] = {
 

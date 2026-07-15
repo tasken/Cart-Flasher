@@ -9,8 +9,6 @@
 using namespace flashcart_core;
 using namespace ncgc;
 
-#define FONT_WIDTH  6
-#define FONT_HEIGHT 10
 
 int main(void)
 {

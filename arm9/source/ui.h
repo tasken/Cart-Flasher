@@ -10,8 +10,16 @@
 #define BG_15BITCOLOR    (1<<7)
 #define BG_CBB1          (1<<2)
 
-#define SCREENWIDTH  256
-#define SCREENHEIGHT 192
+// Screen size comes from libnds (nds/system.h: SCREEN_WIDTH 256, SCREEN_HEIGHT
+// 192). We used to shadow it with our own SCREENWIDTH/SCREENHEIGHT and mix both
+// spellings, which differ by one underscore and read as a typo.
+
+// The font is 6x10 (font.h). Declared here rather than in font.h so callers get
+// the metrics from the UI header they already include -- font.h holds a `static`
+// array, so including it just for two numbers would copy the glyph data into
+// every translation unit.
+#define FONT_WIDTH  6
+#define FONT_HEIGHT 10
 
 #define RGB(x, y, z) RGB8(x, y, z)
 

@@ -5,8 +5,6 @@
 #include "blowfish_ntr_bin.h"
 #include "blowfish_dev_bin.h"
 #include "blowfish_retail_bin.h"
-#define FONT_WIDTH  6
-#define FONT_HEIGHT 10
 #include "ui.h"
 #include <cstdio>
 #include <cstdarg>
