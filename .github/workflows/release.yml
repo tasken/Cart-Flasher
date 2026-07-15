@@ -23,7 +23,7 @@ jobs:
         # keeping the /releases/latest/download/cart_flasher.nds URL permanent.
         # The version and commit shown on the boot screen are unaffected.
         run: |
-          make NDS_OUT=cart_flasher.nds CART_FLASHER_COMMIT=$(echo "${{ github.sha }}" | cut -c1-7) CART_FLASHER_VERSION=${{ github.ref_name }}
+          make NDS_OUT=cart_flasher.nds BANNER_VERSION=${{ github.ref_name }} CART_FLASHER_COMMIT=$(echo "${{ github.sha }}" | cut -c1-7) CART_FLASHER_VERSION=${{ github.ref_name }}
       - name: Upload cart_flasher.nds
         uses: AButler/upload-release-assets@v2.0
         with:

@@ -22,10 +22,12 @@ export TOPDIR := $(CURDIR)
 
 GAME_TITLE     := Cart-Flasher
 GAME_AUTHOR    := @tasken
-GAME_BANNER    := banner.bin
+GAME_ICON      := resources/icon.png
 
-# Combine the title strings
-export GAME_FULL_TITLE := $(GAME_TITLE);$(GAME_AUTHOR)
+# Banner version line: release builds pass BANNER_VERSION=<tag> explicitly;
+# everything else (nightlies, local builds) shows the commit.
+BANNER_VERSION ?= Commit: $(CART_FLASHER_COMMIT)
+GAME_FULL_TITLE := $(GAME_TITLE);Developed by $(GAME_AUTHOR);$(BANNER_VERSION)
 
 # Source code paths
 ARM9DIR		:= arm9
@@ -61,4 +63,4 @@ $(NDS_OUT) : arm9 arm7
 	@echo "  NDSTOOL $@"
 	$(V)$(BLOCKSDS)/tools/ndstool/ndstool -c $@ \
 		-7 $(ARM7DIR)/$(TARGET).elf -9 $(ARM9DIR)/$(TARGET).elf \
-		-t $(GAME_BANNER)
+		-b $(GAME_ICON) "$(GAME_FULL_TITLE)"
