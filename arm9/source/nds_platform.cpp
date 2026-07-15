@@ -113,6 +113,29 @@ namespace flashcart_core {
 	}
 }
 
+// Hardware-state probe, logged whenever the user switches the log level to
+// DEBUG: launch mode, CPU/SCFG state, a timer-calibrated busy-wait measurement
+// (the timer ticks at the fixed 33.5MHz bus clock, so ~8200 ticks means the
+// ARM9 runs at 67MHz, ~4100 means 134MHz regardless of whether SCFG is
+// readable), and the cart-bus registers. EXMEMCNT bit 11 set means the ARM7
+// owns Slot-1 and every ARM9-side cart access reads open-bus 0xFFFFFFFF (the
+// BlocksDS DLDI-on-ARM7 failure mode that broke DS-mode detection).
+void LogHardwareProbe(void)
+{
+	TIMER0_CR = 0;
+	TIMER0_DATA = 0;
+	TIMER0_CR = TIMER_ENABLE | TIMER_DIV_256;
+	ncgc::delay(0x200000);
+	TIMER0_CR = 0;
+	u16 ticks = TIMER0_DATA;
+	flashcart_core::platform::logMessage(flashcart_core::LOG_DEBUG,
+		"probe: dsi=%d SCFG_CLK=0x%04X SCFG_EXT=0x%08lX delayTicks=%u",
+		isDSiMode(), REG_SCFG_CLK, (unsigned long)REG_SCFG_EXT, ticks);
+	flashcart_core::platform::logMessage(flashcart_core::LOG_DEBUG,
+		"probe: EXMEMCNT=0x%04X ROMCTRL=0x%08lX AUXSPICNT=0x%04X",
+		REG_EXMEMCNT, (unsigned long)REG_ROMCTRL, REG_AUXSPICNT);
+}
+
 static char* calculate_backup_path(const char *cart_name) {
     int path_len = snprintf(NULL, 0, "/cart-backups/%s-backup.bin", cart_name) + 1;
     char *path = (char *)malloc(path_len);

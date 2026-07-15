@@ -141,6 +141,12 @@ void menu_lvl1(Flashcart* cart)
 				global_loglevel++;
 			}
 			DrawFooter(global_loglevel);
+			// Entering DEBUG snapshots the hardware state into the log, so
+			// every debug capture starts with the launch mode, real CPU speed
+			// and cart-bus ownership without needing a special build.
+			if (global_loglevel == 0) {
+				LogHardwareProbe();
+			}
 		}
 		if (keysDown() & KEY_A)
 		{
