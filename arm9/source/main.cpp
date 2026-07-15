@@ -10,6 +10,11 @@ using namespace ncgc;
 
 int main(void)
 {
+	// BlocksDS boosts the ARM9 to 134MHz on DSi by default (devkitARM never did).
+	// libncgc's cart-protocol delays are raw cycle-count busy-waits, so doubling the
+	// clock halves their real time -- force back to 67MHz to match the old timing.
+	setCpuClock(false);
+
 	sysSetBusOwners(true, true); //Give ARM9 access to the cart
 	InitializeScreens();
 	fatInitDefault();
