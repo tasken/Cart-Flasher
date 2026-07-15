@@ -55,6 +55,17 @@ void WaitPress(u32 KEY) {
 	while (true) { swiWaitForVBlank(); scanKeys(); if (keysDown() & KEY) { break; } }
 }
 
+// <A> to go ahead, <B> to back out. WaitPress() only ever waits for one key, so
+// it can't express a choice.
+static bool WaitConfirm(void) {
+	while (true) {
+		swiWaitForVBlank();
+		scanKeys();
+		if (keysDown() & KEY_A) { return true; }
+		if (keysDown() & KEY_B) { return false; }
+	}
+}
+
 bool ntrCardReset()
 {
 	if (isDSiMode())
@@ -246,10 +257,27 @@ void menu_lvl2(Flashcart* cart)
 			// The "<A> Select <B> Back" footer no longer applies once the button-combo
 			// prompt takes over input, so make sure that row is blank before showing it.
 			DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
-			DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (8 * FONT_HEIGHT), COLOR_WHITE, (menu_sel == 0) ?
-				"About to read a full backup from\nthis cart. Enter the button combo\nbelow to confirm:" :
-				"This will overwrite the cart's\nflash memory and can't be undone.\nEnter the combo below to confirm:");
-			if (d0k3_buttoncombo(10 * FONT_WIDTH, 12 * FONT_HEIGHT))
+			// Only writing gets the random-combo gate. Reading can't harm the cart:
+			// no driver reaches an erase or program command from readFlash, and
+			// AK2i's even re-locks the flash before it reads. Gating the safe
+			// operation just as heavily would train people to mash through the
+			// combo before it shows up on the one that does destroy data.
+			bool confirmed;
+			if (menu_sel == 0)
+			{
+				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (8 * FONT_HEIGHT), COLOR_WHITE,
+					"About to read a full backup from\nthis cart.");
+				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (12 * FONT_HEIGHT), COLOR_YELLOW, "<A> Start backup   <B> Cancel");
+				confirmed = WaitConfirm();
+			}
+			else
+			{
+				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (8 * FONT_HEIGHT), COLOR_WHITE,
+					"This will overwrite the cart's\nflash memory and can't be undone.\nEnter the combo below to confirm:");
+				confirmed = d0k3_buttoncombo(10 * FONT_WIDTH, 12 * FONT_HEIGHT);
+			}
+
+			if (confirmed)
 			{
 				ClearScreen(BOTTOM_SCREEN, COLOR_BLACK);
 				if (menu_sel == 0) {
@@ -306,8 +334,10 @@ void menu_lvl2(Flashcart* cart)
 						break;
 					}
 			}
-			else
+			else if (menu_sel == 1)
 			{
+				// Only worth saying when the combo was mistyped. On the backup
+				// screen <B> *is* the cancel key, so asking for it again is noise.
 				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (14 * FONT_HEIGHT), COLOR_WHITE, "No problem, nothing was touched.\nPress <B> to go back.");
 				WaitPress(KEY_B);
 			}
