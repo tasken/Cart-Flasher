@@ -9,6 +9,9 @@
 using namespace flashcart_core;
 using namespace ncgc;
 
+#define FONT_WIDTH  6
+#define FONT_HEIGHT 10
+
 int main(void)
 {
 	// BlocksDS boosts the ARM9 to 134MHz on DSi by default (devkitARM never did).
@@ -24,7 +27,10 @@ int main(void)
 	// ARM9-side cart access in libncgc reads open-bus 0xFFFFFFFF and detection
 	// fails. devkitARM always ran DLDI on the ARM9; pin that behavior back.
 	dldiSetMode(DLDI_MODE_ARM9);
-	fatInitDefault();
+	if (!fatInitDefault()) {
+		DrawString(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_RED,
+			"SD card init failed!\nLogging, backups and writes\nwon't work this session.");
+	}
 
 	Flashcart *cart = nullptr; //We define our main cart variable right here, and we will pass it along from function to function until the very end
 
