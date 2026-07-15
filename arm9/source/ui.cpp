@@ -116,6 +116,13 @@ void DrawFooter(int loglevel)
 	DrawStringF(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <Y> Log: %s", loglevel_str);
 }
 
+// Horizontally centres a single line. Same arithmetic the DrawHeader callers
+// already open-code; single-line only, since a '\n' would throw the width off.
+void DrawStringCentered(u16 *screen, int y, u16 color, const char *str)
+{
+	DrawString(screen, (SCREEN_WIDTH - (int)(strlen(str) * FONT_WIDTH)) / 2, y, color, str);
+}
+
 void DrawStringF(u16 *screen, int x, int y, u16 color, const char *format, ...)
 {
 	char str[256];

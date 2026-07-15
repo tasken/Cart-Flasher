@@ -56,6 +56,7 @@ void DrawRectangle(u16 *screen, int x, int y, int width, int height, u16 color);
 void DrawCharacter(u16 *screen, int character, int x, int y, u16 color);
 void DrawString(u16 *screen, int x, int y, u16 color, const char *str);
 void DrawStringF(u16 *screen, int x, int y, u16 color, const char *format, ...);
+void DrawStringCentered(u16 *screen, int y, u16 color, const char *str);
 void DrawListRow(u16 *screen, int y, bool selected, u16 highlightColor, const char *text);
 
 void SetProgressOverride(uint32_t current, uint32_t total);

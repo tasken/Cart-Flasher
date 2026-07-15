@@ -260,17 +260,23 @@ void menu_lvl2(Flashcart* cart)
 			// The "<A> Select <B> Back" footer no longer applies once the button-combo
 			// prompt takes over input, so make sure that row is blank before showing it.
 			DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
+			// Both screens centre their block in rows 4..17 (below the menu, above
+			// the footer row) with a blank row between every element. WARN_X centres
+			// the widest warning line; the prompt and the combo centre on their own
+			// widths. Row numbers below are the result of that, not magic.
+			//
 			// Only writing gets the random-combo gate. Reading can't harm the cart:
 			// no driver reaches an erase or program command from readFlash, and
 			// AK2i's even re-locks the flash before it reads. Gating the safe
 			// operation just as heavily would train people to mash through the
 			// combo before it shows up on the one that does destroy data.
+			const int WARN_X = 4 * FONT_WIDTH;
 			bool confirmed;
 			if (menu_sel == 0)
 			{
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (6 * FONT_HEIGHT), COLOR_WHITE,
+				DrawString(TOP_SCREEN, WARN_X, (6 * FONT_HEIGHT), COLOR_WHITE,
 					"Dumping this cart's flashrom to\n/cart-backups on your SD card.\n\nNothing is written to the cart.\n\nIf it fails, or the dump is\nnonsense, STOP and open a GitHub\nissue.");
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_YELLOW, "<A> Start backup   <B> Cancel");
+				DrawStringCentered(TOP_SCREEN, (15 * FONT_HEIGHT), COLOR_YELLOW, "<A> Start backup   <B> Cancel");
 				confirmed = WaitConfirm();
 			}
 			else
@@ -278,10 +284,10 @@ void menu_lvl2(Flashcart* cart)
 				// The banner/icon note lives only on the write path: restoring an
 				// untouched dump leaves the banner byte-identical, so it can't
 				// break stock DSi/3DS loading.
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (5 * FONT_HEIGHT), COLOR_WHITE,
+				DrawString(TOP_SCREEN, WARN_X, (5 * FONT_HEIGHT), COLOR_WHITE,
 					"This overwrites the cart's flashrom\nand can't be undone.\n\nA changed icon or banner is blocked\nby stock DSi/3DS firmware unless CFW\nis installed. NDS/DS Lite are fine.");
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (12 * FONT_HEIGHT), COLOR_YELLOW, "Enter the key combo to confirm:");
-				confirmed = d0k3_buttoncombo(10 * FONT_WIDTH, 14 * FONT_HEIGHT);
+				DrawStringCentered(TOP_SCREEN, (12 * FONT_HEIGHT), COLOR_YELLOW, "Enter the key combo to confirm:");
+				confirmed = d0k3_buttoncombo(14 * FONT_HEIGHT);
 			}
 
 			if (confirmed)
@@ -355,8 +361,14 @@ void menu_lvl2(Flashcart* cart)
 const char rancombo_symbols[5] = { '\x1B', '\x18', '\x1A', '\x19', 'A' }; // Left, Up, Right, Down
 const u32 rancombo_inputs[5] = { KEY_LEFT, KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_A };
 
-bool d0k3_buttoncombo(int cur_c, int cur_r)
+bool d0k3_buttoncombo(int cur_r)
 {
+	// The combo is always 5 slots wide, so it can centre itself rather than make
+	// every caller work the column out: 4 slots advance by 4 chars, the last one
+	// draws '<', symbol, '>' with no trailing gap.
+	const int combo_width = (4 * (4 * FONT_WIDTH)) + (3 * FONT_WIDTH);
+	const int cur_c = (SCREEN_WIDTH - combo_width) / 2;
+
 	// Seeded once in main(), never here: re-seeding per call from time(NULL) tied
 	// the combo to the clock second instead of advancing the sequence.
 	//
@@ -416,7 +428,7 @@ bool d0k3_buttoncombo(int cur_c, int cur_r)
 				// The message goes two rows under the combo so it keeps its blank
 				// separator wherever the caller placed it.
 				const int msg_r = cur_r + (2 * FONT_HEIGHT);
-				DrawString(TOP_SCREEN, (2 * FONT_WIDTH), msg_r, COLOR_RED, "Wrong key combo. <A> Retry <B> Cancel");
+				DrawStringCentered(TOP_SCREEN, msg_r, COLOR_RED, "Wrong key combo. <A> Retry <B> Cancel");
 				if (!WaitConfirm()) { return false; }
 				DrawRectangle(TOP_SCREEN, 0, msg_r, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
 				depth = 0;
