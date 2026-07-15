@@ -4,9 +4,9 @@
 #include "nds_platform.h"
 #include "device.h"
 #include "filebrowser.h"
-#include <ctime>
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib> // rand(); the seed itself lives in main()
 
 #define bootmsg "This tool writes directly to your\n" 					\
 				"flashcart's memory. If something\n" 					\
@@ -303,15 +303,27 @@ void menu_lvl2(Flashcart* cart)
 }
 
 //Will print out a gm9/sb9si like "input button combo to continue" prompt, also does the button checking for it
-//Requires #include <ctime> for the rand() seed
+//The RNG is seeded once in main(), not here
 
 const char rancombo_symbols[5] = { '\x1B', '\x18', '\x1A', '\x19', 'A' }; // Left, Up, Right, Down
 const u32 rancombo_inputs[5] = { KEY_LEFT, KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_A };
 
 bool d0k3_buttoncombo(int cur_c, int cur_r)
 {
-	srand(time(NULL));
-	int num_rancombo[5] = { (rand() % 4), (rand() % 4), (rand() % 4), (rand() % 4), 4 }; // zero based, '4' is the 5th item (A)
+	// Seeded once in main(), never here: re-seeding per call from time(NULL) tied
+	// the combo to the clock second instead of advancing the sequence.
+	//
+	// No symbol may repeat back-to-back, same as GodMode9 (ui.c: `while (lsh ==
+	// lastlsh) lsh = (PRNG & 0x3)`). A doubled arrow is easy to misread as one,
+	// and it keeps the double-tap tolerance below unambiguous.
+	int num_rancombo[5] = { 0, 0, 0, 0, 4 }; // zero based, '4' is the 5th item (A)
+	int last_symbol = -1;
+	for (int i = 0; i < 4; i++) {
+		int symbol = last_symbol;
+		while (symbol == last_symbol) { symbol = rand() % 4; }
+		num_rancombo[i] = symbol;
+		last_symbol = symbol;
+	}
 	char print_rancombo[5] = { ' ', ' ', ' ', ' ', ' ' };
 	u32 check_rancombo[5] = { 0, 0, 0, 0, 0 };
 	for (int i = 0; i < 5; i++) {

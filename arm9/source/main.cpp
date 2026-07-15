@@ -2,6 +2,8 @@
 #include <fat.h>
 #include <nds.h>
 #include <nds/arm9/dldi.h>
+#include <cstdlib>
+#include <ctime>
 #include "device.h"
 #include "ui.h"
 #include "menu.h"
@@ -16,6 +18,13 @@ int main(void)
 	// libncgc's cart-protocol delays are raw cycle-count busy-waits, so doubling the
 	// clock halves their real time -- force back to 67MHz to match the old timing.
 	setCpuClock(false);
+
+	// Seed once, here. The button-combo prompt used to call srand(time(NULL))
+	// itself every time it ran, which reset the RNG instead of advancing it and
+	// made the combo a pure function of the clock second -- two prompts in the
+	// same second got a byte-identical combo. Seeding once lets each prompt walk
+	// the sequence forward, so no two ever match regardless of timing.
+	srand(time(NULL));
 
 	sysSetBusOwners(true, true); //Give ARM9 access to the cart
 	InitializeScreens();
