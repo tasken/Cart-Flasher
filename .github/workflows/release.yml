@@ -19,10 +19,13 @@ jobs:
         uses: actions/checkout@v6
       - name: Build app
         id: build
+        # NDS_OUT is fixed so every release carries an identically-named asset,
+        # keeping the /releases/latest/download/cart_flasher.nds URL permanent.
+        # The version and commit shown on the boot screen are unaffected.
         run: |
-          make CART_FLASHER_COMMIT=$(echo "${{ github.sha }}" | cut -c1-7) CART_FLASHER_VERSION=${{ github.ref_name }}
+          make NDS_OUT=cart_flasher.nds CART_FLASHER_COMMIT=$(echo "${{ github.sha }}" | cut -c1-7) CART_FLASHER_VERSION=${{ github.ref_name }}
       - name: Upload cart_flasher.nds
         uses: AButler/upload-release-assets@v2.0
         with:
-          files: cart_flasher-*.nds
+          files: cart_flasher.nds
           repo-token: ${{ secrets.GITHUB_TOKEN }}
