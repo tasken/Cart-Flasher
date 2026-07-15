@@ -53,10 +53,25 @@ namespace flashcart_core {
 		{
 			if (priority < global_loglevel) { return 0; }
 
-			static bool first_open = true;
-			if (mount_fat() != ALL_OK) { return -1; }
+			// mount_fat() only needs to run once: main() already calls
+			// fatInitDefault() at startup and unmount_fat() is a no-op, so FAT
+			// stays mounted for the program's lifetime. Re-running it on every
+			// call (2x access() + mkdir()) was avoidable overhead on top of the
+			// fopen()/fclose() below.
+			static bool mounted = false;
+			if (!mounted) {
+				if (mount_fat() != ALL_OK) { return -1; }
+				mounted = true;
+			}
 
-			// Overwrite if this is our first time opening the file.
+			// The file must be closed on every call: on BlocksDS's FatFs-backed
+			// filesystem, a file's size in its directory entry is only committed
+			// by fclose() -- neither fflush() nor fsync() reliably did it here in
+			// testing, even though fat_fsync()/f_sync() exist in the syscall table.
+			// Keeping the file open for the program's lifetime (an earlier version
+			// of this fix) made LOG_DEBUG-heavy dumps fast but left the log file's
+			// reported size at 0 bytes forever.
+			static bool first_open = true;
 			FILE *logfile = fopen("/cart_flasher.log", first_open ? "w" : "a");
 			if (!logfile) { return -1; }
 			first_open = false;
@@ -78,7 +93,6 @@ namespace flashcart_core {
 
 			int result = vfprintf(logfile, string_to_write, args);
 			fclose(logfile);
-			unmount_fat();
 			va_end(args);
 
 			return result;
