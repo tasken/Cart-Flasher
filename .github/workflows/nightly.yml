@@ -19,7 +19,7 @@ jobs:
     name: Build with BlocksDS toolchain using official Docker image
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Build app
         id: build
         # NDS_OUT is pinned so CI filenames are always cart_flasher-<commit>.nds;
@@ -28,7 +28,7 @@ jobs:
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           make NDS_OUT=cart_flasher-$SHORT_SHA.nds CART_FLASHER_COMMIT=$SHORT_SHA CART_FLASHER_VERSION=nightly
       - name: Publish build to GH Actions
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           # Keep the hash in the filename so downloaded nightlies identify
           # their commit.

@@ -16,7 +16,7 @@ jobs:
     name: Build with BlocksDS toolchain using official Docker image
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Build app
         id: build
         # NDS_OUT is fixed so every release carries an identically-named asset,
@@ -25,7 +25,7 @@ jobs:
         run: |
           make NDS_OUT=cart_flasher.nds BANNER_VERSION=${{ github.ref_name }} CART_FLASHER_COMMIT=$(echo "${{ github.sha }}" | cut -c1-7) CART_FLASHER_VERSION=${{ github.ref_name }}
       - name: Upload cart_flasher.nds
-        uses: AButler/upload-release-assets@v2.0
+        uses: AButler/upload-release-assets@v4.0.0
         with:
           files: cart_flasher.nds
           repo-token: ${{ secrets.GITHUB_TOKEN }}
