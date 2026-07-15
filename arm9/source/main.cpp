@@ -1,6 +1,7 @@
 #include <dirent.h>
 #include <fat.h>
 #include <nds.h>
+#include <nds/arm9/dldi.h>
 #include "device.h"
 #include "ui.h"
 #include "menu.h"
@@ -17,6 +18,12 @@ int main(void)
 
 	sysSetBusOwners(true, true); //Give ARM9 access to the cart
 	InitializeScreens();
+
+	// BlocksDS autodetects ARM7-capable DLDI drivers and runs them on the ARM7,
+	// which hands Slot-1 to the ARM7 (EXMEMCNT bit 11) -- after that, every
+	// ARM9-side cart access in libncgc reads open-bus 0xFFFFFFFF and detection
+	// fails. devkitARM always ran DLDI on the ARM9; pin that behavior back.
+	dldiSetMode(DLDI_MODE_ARM9);
 	fatInitDefault();
 
 	Flashcart *cart = nullptr; //We define our main cart variable right here, and we will pass it along from function to function until the very end
