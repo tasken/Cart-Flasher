@@ -195,6 +195,18 @@ return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
 		return FILE_OPEN_FAILED;
 	}
 
+	// Validate the file size before touching the cart. The old full-buffer
+	// code read the whole file up front, so a truncated file failed before a
+	// single byte was flashed; streaming would otherwise only notice mid-loop,
+	// aborting with the cart's firmware half overwritten.
+	fseek(FileIn, 0, SEEK_END);
+	long fileSize = ftell(FileIn);
+	rewind(FileIn);
+	if (fileSize < 0 || (u32)fileSize < Flash_size) {
+		fclose(FileIn);
+		return FILE_IO_FAILED;
+	}
+
 	u8 *chunkBuffer = new(std::nothrow) u8[chunkSize];
 	if (!chunkBuffer) {
 		fclose(FileIn);
