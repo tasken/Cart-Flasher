@@ -10,7 +10,14 @@ CART_FLASHER_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo un
 export CART_FLASHER_COMMIT
 CART_FLASHER_VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.1-alpha")
 export CART_FLASHER_VERSION
+CART_FLASHER_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
+# Branch names may contain '/', which would break the output path.
+CART_FLASHER_BRANCH := $(subst /,-,$(CART_FLASHER_BRANCH))
+ifeq ($(CART_FLASHER_BRANCH),main)
 export NDS_OUT := $(TARGET)-$(CART_FLASHER_COMMIT).nds
+else
+export NDS_OUT := $(TARGET)-$(CART_FLASHER_BRANCH)-$(CART_FLASHER_COMMIT).nds
+endif
 export TOPDIR := $(CURDIR)
 
 GAME_TITLE     := Cart-Flasher
