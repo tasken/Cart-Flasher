@@ -169,7 +169,8 @@ return_codes_t DumpFlash(flashcart_core::Flashcart* cart)
 	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
 	DrawString(TOP_SCREEN, FONT_WIDTH * 2, 6 * FONT_HEIGHT, COLOR_WHITE, "Backing up your cart...");
 
-	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Backing up your cart...");
+	progressCount = 0; // start the driver-side draw throttle from a known phase
+	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Reading flash");
 
 	for (u32 chunkOffset = 0; chunkOffset < Flash_size; chunkOffset += chunkSize) {
 		SetProgressOverride(chunkOffset, Flash_size);
@@ -194,14 +195,14 @@ return_codes_t DumpFlash(flashcart_core::Flashcart* cart)
 		}
 
 		SetProgressOverride(0, 0); // Reset override before drawing absolute progress
-		ShowProgress(BOTTOM_SCREEN, chunkOffset + currentChunkSize, Flash_size, "Backing up your cart...");
+		ShowProgress(BOTTOM_SCREEN, chunkOffset + currentChunkSize, Flash_size, "Reading flash");
 	}
 
 	fclose(FileOut);
 	delete[] chunkBuffer;
 
 	SetProgressOverride(0, 0); // Reset override
-	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "Backing up your cart...");
+	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "Reading flash");
 
 	return ALL_OK;
 }
@@ -239,7 +240,8 @@ return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
 	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
 	DrawString(TOP_SCREEN, FONT_WIDTH * 2, 6 * FONT_HEIGHT, COLOR_WHITE, "Writing to your cart...");
 
-	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Writing to flash...");
+	progressCount = 0; // start the driver-side draw throttle from a known phase
+	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Writing flash");
 
 	for (u32 chunkOffset = 0; chunkOffset < Flash_size; chunkOffset += chunkSize) {
 		SetProgressOverride(chunkOffset, Flash_size);
@@ -263,14 +265,14 @@ return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
 			return FLASH_OP_FAILED; //Flash writing failed
 		}
 		SetProgressOverride(0, 0); // Reset override before drawing absolute progress
-		ShowProgress(BOTTOM_SCREEN, chunkOffset + currentChunkSize, Flash_size, "Writing to flash...");
+		ShowProgress(BOTTOM_SCREEN, chunkOffset + currentChunkSize, Flash_size, "Writing flash");
 	}
 
 	fclose(FileIn);
 	delete[] chunkBuffer;
 
 	SetProgressOverride(0, 0); // Reset override
-	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "Writing to flash...");
+	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "Writing flash");
 
 	return ALL_OK;
 }

@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 void InitializeScreens(void) {
 	REG_DISPCNT = MODE_3_2D | DISPLAY_BG3_ACTIVE;
@@ -166,24 +167,41 @@ void ShowProgress(u16 *screen, uint32_t current, uint32_t total, const char* sta
 	// Apply overrides
 	if (progress_total_override) total = progress_total_override;
 	current += progress_current_override;
+	// Clamp instead of zeroing: an overshooting caller must not rewind the bar.
+	if (current > total) current = total;
 
 	static uint32_t last_prog_width = 1;
-	uint32_t prog_width = ((total > 0) && (current <= total)) ? (current * (bar_width - 4)) / total : 0;
-	uint32_t prog_percent = ((total > 0) && (current <= total)) ? (current * 100) / total : 0;
+	static uint32_t last_prog_percent = 101;
+	static char last_status[48];
+	uint32_t prog_width = (total > 0) ? (current * (bar_width - 4)) / total : 0;
+	uint32_t prog_percent = (total > 0) ? (current * 100) / total : 0;
 
-	// draw the initial outline
-	if (current == 0 || last_prog_width > prog_width)
+	// Fresh operation: paint the backdrop and bar outline once.
+	if (current == 0)
 	{
 		ClearScreen(screen, STD_COLOR_BG);
 		DrawRectangle(screen, bar_pos_x, bar_pos_y, bar_width, bar_height, STD_COLOR_FONT);
 		DrawRectangle(screen, bar_pos_x + 1, bar_pos_y + 1, bar_width - 2, bar_height - 2, STD_COLOR_BG);
+		last_prog_width = 0;
+		last_prog_percent = 101;
+		last_status[0] = '\0';
 	}
 
-	DrawRectangle(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, bar_width, FONT_HEIGHT, STD_COLOR_BG);
-	DrawString(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, STD_COLOR_FONT, status);
+	// Status label: redraw only when the text actually changes. Redrawing it
+	// on every call made the label visibly flicker, worst when two callers
+	// alternated different strings for the same operation.
+	if (status && strncmp(status, last_status, sizeof(last_status) - 1) != 0)
+	{
+		DrawRectangle(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, bar_width, FONT_HEIGHT, STD_COLOR_BG);
+		DrawString(screen, bar_pos_x, bar_pos_y - FONT_HEIGHT - 4, STD_COLOR_FONT, status);
+		strncpy(last_status, status, sizeof(last_status) - 1);
+		last_status[sizeof(last_status) - 1] = '\0';
+	}
 
-	// only draw the rectangle if it's changed.
-	if (current == 0 || last_prog_width != prog_width)
+	// Bar and percent: repaint only on change. A shrinking width (multi-pass
+	// operations like erase-then-write) repaints just the bar interior,
+	// never the whole screen.
+	if (prog_width != last_prog_width || prog_percent != last_prog_percent)
 	{
 		DrawRectangle(screen, bar_pos_x + 1, bar_pos_y + 1, bar_width - 2, bar_height - 2, STD_COLOR_BG); // Clear the progress bar before re-rendering.
 		DrawRectangle(screen, bar_pos_x + 2, bar_pos_y + 2, prog_width, bar_height - 4, COLOR_GREEN);
@@ -191,4 +209,5 @@ void ShowProgress(u16 *screen, uint32_t current, uint32_t total, const char* sta
 	}
 
 	last_prog_width = prog_width;
+	last_prog_percent = prog_percent;
 }
