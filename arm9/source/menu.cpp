@@ -33,11 +33,11 @@ void print_boot_msg(void)
 	char header_title[64];
 	sprintf(header_title, "Cart-Flasher %s", CART_FLASHER_VERSION);
 	DrawHeader(TOP_SCREEN, header_title, ((SCREEN_WIDTH - (strlen(header_title) * FONT_WIDTH)) / 2));
-	DrawString(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 2, COLOR_WHITE, bootmsg);
+	DrawString(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, bootmsg);
 	// Spacing of 1 empty line after welcome message. A/B instructions at row 13.
-	DrawString(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 13, COLOR_YELLOW, "<A> Continue   <B> Power off");
+	DrawString(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 13, COLOR_YELLOW, "<A> Continue   <B> Power off");
 	// Spacing of 2 empty lines after A/B instructions. Credits at row 16.
-	DrawStringF(TOP_SCREEN, FONT_WIDTH * 2, FONT_HEIGHT * 16, COLOR_GREY, "Developed by @tasken\nCommit: %s\nOriginal by jason0597 & DS-Homebrew", CART_FLASHER_COMMIT);
+	DrawStringF(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 16, COLOR_GREY, "Developed by @tasken\nCommit: %s\nOriginal by jason0597 & DS-Homebrew", CART_FLASHER_COMMIT);
 
 	while (true)
 	{
@@ -193,7 +193,15 @@ void menu_lvl1(Flashcart* cart)
 			}
 			if (!cart->initialize(&card)) //If cart initialization fails, do all this and then break to main menu
 			{
-				DrawString(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, COLOR_RED, "Couldn't detect this flashcart.\nCheck it's inserted firmly, then\npress <B> to go back to the list.");
+				// One blank row under the last cart. The list starts at row 2 and
+				// its length varies (R4iSDHC.hk is hidden outside DSi mode), so a
+				// fixed row would sit flush against the list in DSi mode.
+				const int errorRow = flashcart_list_size + 3;
+				// Only <B> is accepted below, so blank the footer rather than leave
+				// it offering <A>/<Y>. The <B> handler calls DrawFooter to restore it.
+				DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
+				DrawString(TOP_SCREEN, FONT_WIDTH, errorRow * FONT_HEIGHT, COLOR_RED, "Couldn't detect this flashcart.\nCheck it's inserted firmly.");
+				DrawString(TOP_SCREEN, FONT_WIDTH, (errorRow + 3) * FONT_HEIGHT, COLOR_YELLOW, "<B> Back to the list");
 				while (true) { scanKeys(); if (keysDown() & KEY_B) { DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREEN_WIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2)); DrawFooter(global_loglevel); break; } }
 				reprintFlag = true;
 			}
@@ -222,7 +230,7 @@ void menu_lvl1(Flashcart* cart)
 void menu_lvl2(Flashcart* cart)
 {
 	DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
-	DrawString(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <B> Back");
+	DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_YELLOW, "<A> Select   <B> Back");
 	int menu_sel = 0;
 	bool dirty = true;
 
@@ -262,33 +270,34 @@ void menu_lvl2(Flashcart* cart)
 			if (menu_sel == 1) {
 				if (!BrowseForFile("/cart-backups", ".bin", writePath, sizeof(writePath))) {
 					DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
-					DrawString(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <B> Back");
+					DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_YELLOW, "<A> Select   <B> Back");
 					dirty = true;
 					continue;
 				}
-				DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
+				// No DrawHeader here: the confirm below redraws it anyway, and
+				// clears the file browser off the screen while it's at it.
 			}
 
-			// The "<A> Select <B> Back" footer no longer applies once the button-combo
-			// prompt takes over input, so make sure that row is blank before showing it.
-			DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
-			// Both screens centre their block in rows 4..17 (below the menu, above
-			// the footer row) with a blank row between every element. WARN_X centres
-			// the widest warning line; the prompt and the combo centre on their own
-			// widths. Row numbers below are the result of that, not magic.
+			// The confirm takes the whole screen: once you're deciding, the menu you
+			// came from is just noise, and DrawHeader clears it (footer included)
+			// for free. Both blocks are 10 rows and centre at row 5, so the two
+			// paths line up with each other; WARN_X centres the widest warning line
+			// and the prompt/combo centre on their own. Rows below are the result of
+			// that, not magic.
 			//
 			// Only writing gets the random-combo gate. Reading can't harm the cart:
 			// no driver reaches an erase or program command from readFlash, and
 			// AK2i's even re-locks the flash before it reads. Gating the safe
 			// operation just as heavily would train people to mash through the
 			// combo before it shows up on the one that does destroy data.
+			DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
 			const int WARN_X = 4 * FONT_WIDTH;
 			bool confirmed;
 			if (menu_sel == 0)
 			{
-				DrawString(TOP_SCREEN, WARN_X, (6 * FONT_HEIGHT), COLOR_WHITE,
+				DrawString(TOP_SCREEN, WARN_X, (5 * FONT_HEIGHT), COLOR_WHITE,
 					"Dumping this cart's flashrom to\n/cart-backups on your SD card.\n\nNothing is written to the cart.\n\nIf it fails, or the dump is\nnonsense, STOP and open a GitHub\nissue.");
-				DrawStringCentered(TOP_SCREEN, (15 * FONT_HEIGHT), COLOR_YELLOW, "<A> Start backup   <B> Cancel");
+				DrawStringCentered(TOP_SCREEN, (14 * FONT_HEIGHT), COLOR_YELLOW, "<A> Start backup   <B> Cancel");
 				confirmed = WaitConfirm();
 			}
 			else
@@ -313,13 +322,13 @@ void menu_lvl2(Flashcart* cart)
 
 				switch (ntrboot_return) {
 					case FAT_MOUNT_FAILED:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, "Couldn't access the SD card.\nMake sure it's inserted, then\npress <B> to go back.");
+						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, "Couldn't access the SD card.\nMake sure it's inserted, then\npress <B> to go back.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case FILE_OPEN_FAILED:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
+						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
 							"Couldn't create the backup file.\nCheck the SD card isn't full or\nlocked, then press <B> to go back." :
 							"Couldn't open that file.\nIt may have been moved or deleted.\nPress <B> to go back.");
 						WaitPress(KEY_B);
@@ -327,7 +336,7 @@ void menu_lvl2(Flashcart* cart)
 						break;
 
 					case FILE_IO_FAILED:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
+						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
 							"Something went wrong writing the\nbackup file. Check the SD card has\nfree space, then press <B> to go back." :
 							"Something went wrong reading that\nfile, it may be damaged, or the\nSD card's loose. Press <B> to go back.");
 						WaitPress(KEY_B);
@@ -335,7 +344,7 @@ void menu_lvl2(Flashcart* cart)
 						break;
 
 					case FLASH_OP_FAILED:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
+						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
 							"Reading from the cart failed\npartway through. Try reseating it.\nPress <B> to return to the menu." :
 							"Writing to the cart failed\npartway through. Try reseating it.\nPress <B> to return to the menu.");
 						WaitPress(KEY_B);
@@ -343,14 +352,14 @@ void menu_lvl2(Flashcart* cart)
 						break;
 
 					case MEM_ALLOC_FAILED:
-						DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED,
+						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
 							"Not enough free console memory\nto buffer the firmware. Try a\nsmaller backup file, press <B>.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case ALL_OK:
-						DrawString(TOP_SCREEN, (1 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_GREEN, (menu_sel == 0) ?
+						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_GREEN, (menu_sel == 0) ?
 							"Backup complete! Your dump was\nsaved. Press <A> to continue." :
 							"All done! Your flash was written\nsuccessfully. Press <A> to continue.");
 						WaitPress(KEY_A);
@@ -437,12 +446,14 @@ bool d0k3_buttoncombo(int cur_r)
 				// so a retry redraws the same glyphs in place and asks the user
 				// for attention, not for memory.
 				//
-				// The message goes two rows under the combo so it keeps its blank
-				// separator wherever the caller placed it.
+				// Two rows under the combo, so it keeps its blank separator
+				// wherever the caller placed it. Red says what went wrong, yellow
+				// offers the choice -- the same split every other screen uses.
 				const int msg_r = cur_r + (2 * FONT_HEIGHT);
-				DrawStringCentered(TOP_SCREEN, msg_r, COLOR_RED, "Wrong key combo. <A> Retry <B> Cancel");
+				DrawStringCentered(TOP_SCREEN, msg_r, COLOR_RED, "Wrong key combo, nothing was touched.");
+				DrawStringCentered(TOP_SCREEN, msg_r + FONT_HEIGHT, COLOR_YELLOW, "<A> Retry   <B> Cancel");
 				if (!WaitConfirm()) { return false; }
-				DrawRectangle(TOP_SCREEN, 0, msg_r, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
+				DrawRectangle(TOP_SCREEN, 0, msg_r, SCREEN_WIDTH, 2 * FONT_HEIGHT, COLOR_BLACK);
 				depth = 0;
 			}
 		}

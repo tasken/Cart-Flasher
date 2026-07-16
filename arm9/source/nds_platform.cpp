@@ -200,7 +200,7 @@ return_codes_t DumpFlash(flashcart_core::Flashcart* cart)
 	}
 
 	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
-	DrawString(TOP_SCREEN, FONT_WIDTH * 2, 6 * FONT_HEIGHT, COLOR_WHITE, "Backing up your cart...");
+	DrawString(TOP_SCREEN, FONT_WIDTH, 6 * FONT_HEIGHT, COLOR_WHITE, "Backing up your cart...");
 
 	progressCount = 0; // start the driver-side draw throttle from a known phase
 	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Reading flash");
@@ -209,8 +209,8 @@ return_codes_t DumpFlash(flashcart_core::Flashcart* cart)
 		SetProgressOverride(chunkOffset, Flash_size);
 		char addrStr[64];
 		sprintf(addrStr, "Reading address: 0x%08lX", chunkOffset);
-		DrawRectangle(TOP_SCREEN, FONT_WIDTH * 2, 8 * FONT_HEIGHT, SCREEN_WIDTH - FONT_WIDTH * 4, FONT_HEIGHT, COLOR_BLACK);
-		DrawString(TOP_SCREEN, FONT_WIDTH * 2, 8 * FONT_HEIGHT, COLOR_WHITE, addrStr);
+		DrawRectangle(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, SCREEN_WIDTH - (2 * FONT_WIDTH), FONT_HEIGHT, COLOR_BLACK);
+		DrawString(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, COLOR_WHITE, addrStr);
 
 		u32 currentChunkSize = std::min(chunkSize, Flash_size - chunkOffset);
 		if (!cart->readFlash(chunkOffset, currentChunkSize, chunkBuffer)) {
@@ -271,7 +271,7 @@ return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
 	}
 
 	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
-	DrawString(TOP_SCREEN, FONT_WIDTH * 2, 6 * FONT_HEIGHT, COLOR_WHITE, "Writing to your cart...");
+	DrawString(TOP_SCREEN, FONT_WIDTH, 6 * FONT_HEIGHT, COLOR_WHITE, "Writing to your cart...");
 
 	progressCount = 0; // start the driver-side draw throttle from a known phase
 	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Writing flash");
@@ -280,8 +280,8 @@ return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
 		SetProgressOverride(chunkOffset, Flash_size);
 		char addrStr[64];
 		sprintf(addrStr, "Writing address: 0x%08lX", chunkOffset);
-		DrawRectangle(TOP_SCREEN, FONT_WIDTH * 2, 8 * FONT_HEIGHT, SCREEN_WIDTH - FONT_WIDTH * 4, FONT_HEIGHT, COLOR_BLACK);
-		DrawString(TOP_SCREEN, FONT_WIDTH * 2, 8 * FONT_HEIGHT, COLOR_WHITE, addrStr);
+		DrawRectangle(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, SCREEN_WIDTH - (2 * FONT_WIDTH), FONT_HEIGHT, COLOR_BLACK);
+		DrawString(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, COLOR_WHITE, addrStr);
 
 		u32 currentChunkSize = std::min(chunkSize, Flash_size - chunkOffset);
 		if (fread(chunkBuffer, 1, currentChunkSize, FileIn) != currentChunkSize) {

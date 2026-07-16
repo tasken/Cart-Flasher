@@ -113,7 +113,7 @@ void DrawFooter(int loglevel)
 	if (loglevel == 2) { loglevel_str = "NOTICE"; }
 	if (loglevel == 3) { loglevel_str = "WARN"; }
 	if (loglevel == 4) { loglevel_str = "ERROR"; }
-	DrawStringF(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Select   <Y> Log: %s", loglevel_str);
+	DrawStringF(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_YELLOW, "<A> Select   <Y> Log: %s", loglevel_str);
 }
 
 // Horizontally centres a single line. Same arithmetic the DrawHeader callers
@@ -164,7 +164,9 @@ void SetProgressOverride(uint32_t current, uint32_t total)
 //https://github.com/ntrteam/ntrboot_flasher/blob/master/source/common/ui.cpp#L201
 void ShowProgress(u16 *screen, uint32_t current, uint32_t total, const char* status)
 {
-	const uint8_t bar_width = SCREEN_WIDTH - FONT_WIDTH;
+	// Leaves FONT_WIDTH either side, so the bar and its label line up with the
+	// left margin every other screen uses. bar_pos_x and text_pos_x derive from it.
+	const uint8_t bar_width = SCREEN_WIDTH - (2 * FONT_WIDTH);
 	const uint8_t bar_height = 12;
 	const uint16_t bar_pos_x = (SCREEN_WIDTH - bar_width) / 2;
 	const uint16_t bar_pos_y = (SCREEN_HEIGHT / 2) - (bar_height / 2);

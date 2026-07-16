@@ -95,7 +95,7 @@ void RenderList(const char* currentPath, const std::vector<FileEntry>& entries, 
 	} else {
 		snprintf(pathDisplay, sizeof(pathDisplay), "%s", currentPath);
 	}
-	DrawString(TOP_SCREEN, 0, FONT_HEIGHT, COLOR_GREY, pathDisplay);
+	DrawString(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT, COLOR_GREY, pathDisplay);
 
 	const int maxNameChars = (SCREEN_WIDTH / FONT_WIDTH) - 2;
 	for (int i = 0; i < visibleCount; i++) {
@@ -121,14 +121,14 @@ void RenderList(const char* currentPath, const std::vector<FileEntry>& entries, 
 		DrawString(TOP_SCREEN, FONT_WIDTH, emptyMsgY, COLOR_GREY, "No .bin files in this folder yet.");
 	}
 
-	DrawString(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_GREY, "<A> Open/Pick file   <B> Back");
+	DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_YELLOW, "<A> Open/Pick file   <B> Back");
 }
 
 } // namespace
 
 bool BrowseForFile(const char* startPath, const char* ext, char* outPath, size_t outPathSize) {
 	if (mount_fat() != ALL_OK) {
-		DrawString(TOP_SCREEN, (2 * FONT_WIDTH), (15 * FONT_HEIGHT), COLOR_RED, "Couldn't access the SD card.\nMake sure it's inserted, then\npress <B> to go back.");
+		DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, "Couldn't access the SD card.\nMake sure it's inserted, then\npress <B> to go back.");
 		WaitPress(KEY_B);
 		return false;
 	}
