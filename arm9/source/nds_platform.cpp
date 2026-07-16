@@ -1,5 +1,6 @@
 #include "nds_platform.h"
 #include <nds.h>
+#include <nds/arm9/dldi.h> // dldiGetMode(), io_dldi_data -- not pulled in by nds.h
 #include <fat.h>
 #include "device.h"
 #include "blowfish_ntr_bin.h"
@@ -118,7 +119,11 @@ namespace flashcart_core {
 // readable), and the cart-bus registers. EXMEMCNT bit 11 set means the ARM7
 // owns Slot-1 and every ARM9-side cart access reads open-bus 0xFFFFFFFF (the
 // BlocksDS DLDI-on-ARM7 failure mode that broke DS-mode detection).
-void LogHardwareProbe(void)
+//
+// Goes to the log *and* the bottom screen, because the two failures worth
+// debugging are opposites: a cart that won't detect leaves a readable log, while
+// an SD card that won't mount leaves none at all.
+void LogHardwareProbe(int firstRow)
 {
 	TIMER0_CR = 0;
 	TIMER0_DATA = 0;
@@ -132,6 +137,36 @@ void LogHardwareProbe(void)
 	flashcart_core::platform::logMessage(flashcart_core::LOG_DEBUG,
 		"probe: EXMEMCNT=0x%04X ROMCTRL=0x%08lX AUXSPICNT=0x%04X",
 		REG_EXMEMCNT, (unsigned long)REG_ROMCTRL, REG_AUXSPICNT);
+
+	// Also put it on the bottom screen. logMessage() needs a mounted SD card, so
+	// when the mount is what failed there is no log file to read and the screen
+	// is the only place this can go -- photograph it.
+	//
+	// EXMEMCNT bit 11 is spelled out rather than left as hex: it decides who owns
+	// Slot-1, and it has explained every cart-detection failure so far.
+	const bool arm9OwnsCart = !(REG_EXMEMCNT & 0x800);
+	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, (firstRow + 0) * FONT_HEIGHT, COLOR_WHITE,
+		"dsi=%d  clk=0x%04X  ticks=%u", isDSiMode(), REG_SCFG_CLK, ticks);
+	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, (firstRow + 1) * FONT_HEIGHT, COLOR_WHITE,
+		"SCFG_EXT=0x%08lX", (unsigned long)REG_SCFG_EXT);
+	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, (firstRow + 2) * FONT_HEIGHT, arm9OwnsCart ? COLOR_GREEN : COLOR_RED,
+		"EXMEMCNT=0x%04X  cart: %s", REG_EXMEMCNT, arm9OwnsCart ? "ARM9" : "ARM7");
+	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, (firstRow + 3) * FONT_HEIGHT, COLOR_WHITE,
+		"ROMCTRL=0x%08lX", (unsigned long)REG_ROMCTRL);
+	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, (firstRow + 4) * FONT_HEIGHT, COLOR_WHITE,
+		"AUXSPICNT=0x%04X", REG_AUXSPICNT);
+	// DLDI: we force ARM9 so the ARM7 can't take Slot-1 out from under libncgc,
+	// but that only works if the driver tolerates it. If the SD won't mount, the
+	// mode and the ARM7_CAPABLE flag are the first things to look at.
+	const DLDI_MODE mode = dldiGetMode();
+	const bool arm7Capable = io_dldi_data
+		&& (io_dldi_data->ioInterface.features & FEATURE_ARM7_CAPABLE);
+	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, (firstRow + 5) * FONT_HEIGHT, COLOR_WHITE,
+		"DLDI on %s, arm7capable=%d",
+		mode == DLDI_MODE_ARM9 ? "ARM9" : mode == DLDI_MODE_ARM7 ? "ARM7" : "auto",
+		arm7Capable);
+	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, (firstRow + 6) * FONT_HEIGHT, COLOR_WHITE,
+		"DLDI: %s", io_dldi_data ? io_dldi_data->friendlyName : "(none)");
 }
 
 static char* calculate_backup_path(const char *cart_name) {

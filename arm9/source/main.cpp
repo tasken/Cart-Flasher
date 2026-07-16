@@ -7,6 +7,7 @@
 #include "device.h"
 #include "ui.h"
 #include "menu.h"
+#include "nds_platform.h"
 
 using namespace flashcart_core;
 using namespace ncgc;
@@ -37,6 +38,11 @@ int main(void)
 	if (!fatInitDefault()) {
 		DrawString(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_RED,
 			"SD card init failed!\nLogging, backups and writes\nwon't work this session.");
+		// Nothing can be logged without a card, so put the probe straight on the
+		// screen instead, under the notice. It survives until the cart list draws
+		// over it, so it can be read (or photographed) from the boot screen.
+		DrawString(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 6, COLOR_GREY, "Hardware probe");
+		LogHardwareProbe(8);
 	}
 
 	Flashcart *cart = nullptr; //We define our main cart variable right here, and we will pass it along from function to function until the very end

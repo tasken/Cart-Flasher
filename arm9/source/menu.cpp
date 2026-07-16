@@ -155,9 +155,21 @@ void menu_lvl1(Flashcart* cart)
 			DrawFooter(global_loglevel);
 			// Entering DEBUG snapshots the hardware state into the log, so
 			// every debug capture starts with the launch mode, real CPU speed
-			// and cart-bus ownership without needing a special build.
+			// and cart-bus ownership without needing a special build. It also
+			// goes on screen, which is the only copy that exists when the SD
+			// card is what failed.
 			if (global_loglevel == 0) {
-				LogHardwareProbe();
+				// The probe owns the bottom screen until dismissed, but its prompt
+				// goes on the top screen's footer row, where every other screen puts
+				// them. Blanking first is required: the footer it replaces is longer,
+				// so drawing straight over it would leave the tail behind.
+				DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
+				DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_YELLOW, "<B> Back to the cart list");
+				DrawHeader(BOTTOM_SCREEN, "Hardware probe", ((SCREEN_WIDTH - (strlen("Hardware probe") * FONT_WIDTH)) / 2));
+				LogHardwareProbe(2);
+				WaitPress(KEY_B);
+				DrawFooter(global_loglevel);
+				reprintFlag = true; // redraws the flashcart info the probe covered
 			}
 		}
 		if (keysDown() & KEY_A)
