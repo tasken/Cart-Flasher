@@ -78,12 +78,18 @@ OBJS_SOURCES	:= $(addsuffix .o,$(addprefix $(BUILDDIR)/,$(SOURCES_S))) \
 OBJS		:= $(OBJS_BIN) $(OBJS_SOURCES)
 DEPS		:= $(OBJS_SOURCES:.o=.d)
 
-.PHONY: all clean
+.PHONY: all clean force_libncgc
 
 all: $(ELF)
 
-$(LIBNCGC)/lib/libncgc.a:
+# libncgc tracks its own sources incrementally, but without a prerequisite the
+# outer make skips this rule entirely once lib/libncgc.a exists, silently
+# ignoring edits to libncgc. Delegate every build; it's a no-op when nothing
+# changed, and only re-copies (bumping the timestamp) when a source actually did.
+$(LIBNCGC)/lib/libncgc.a: force_libncgc
 	@$(MAKE) PLATFORM=ntr -C $(LIBNCGC) fordka
+
+force_libncgc:
 
 $(ELF): $(LIBNCGC)/lib/libncgc.a $(OBJS)
 	@echo "  LD.9    $@"

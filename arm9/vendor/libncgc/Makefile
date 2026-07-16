@@ -16,7 +16,7 @@ ifeq ($(strip $(PLATFORM)),)
 .DEFAULT_GOAL	:=	please_specify_target
 
 clean:
-	@rm -vrf obj/ out/
+	@rm -vrf obj/ out/ lib/
 else
 .DEFAULT_GOAL	:=	out/$(PLATFORM)/libncgc.a
 
@@ -55,7 +55,7 @@ obj/$(PLATFORM)/%.bin.o: %.bin
 	@$(AR) -rcs $@ $^
 
 clean:
-	@rm -vrf obj/$(PLATFORM) out/$(PLATFORM)
+	@rm -vrf obj/$(PLATFORM) out/$(PLATFORM) lib/
 
 fordka: lib/libncgc.a
 
