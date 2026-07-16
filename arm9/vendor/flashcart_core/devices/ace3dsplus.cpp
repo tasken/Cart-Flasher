@@ -1,3 +1,7 @@
+// Modified from ntrteam/flashcart_core by @tasken (2026): removed the post-init
+// RDID==0xFFFFFF failure guard so Macronix "sleeping flash" clones are accepted.
+// See ../MODIFICATIONS.md. Original licensed under GPLv3 (see ../LICENSE).
+
 #include <cstring>
 
 #include <ncgcpp/ntrcard.h>

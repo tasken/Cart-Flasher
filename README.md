@@ -77,3 +77,8 @@ The key combo confirmation before writing to a cart is styled after `d0k3`'s [Go
 ## License
 
 GPL-3.0 - see [LICENSE](LICENSE).
+
+Copyright © the original `ntrboot_flasher_nds` authors and later contributors
+(see Credits above, and the git history for per-change authorship). The vendored
+`flashcart_core` and `libncgc` are also GPL-3.0, under their own `LICENSE` and
+`MODIFICATIONS.md`.
