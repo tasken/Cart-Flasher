@@ -8,9 +8,47 @@ A DS/DSi homebrew application to backup and restore raw flash images to/from Slo
 
 ## Getting started
 
-Grab the latest `.nds` from [Releases](https://github.com/tasken/Cart-Flasher/releases/latest), copy it to your SD card, and launch it from any DS/DSi homebrew launcher. Pick your flashcart from the list, then Backup to dump its flash to `/cart-backups` on your SD card, or Restore to write an image back.
+Download the latest [`cart_flasher.nds`](https://github.com/tasken/Cart-Flasher/releases/latest/download/cart_flasher.nds) and place it on your flashcart's SD card.
 
-Supports Ace3DS Plus, AK2i, DSTT, R4iSDHC family, and R4i Gold 3DS, in both DS and DSi mode.
+1. Boot into your flashcart menu, and launch Cart-Flasher.
+1. Accept the warning by pressing `A`.
+1. Select your cart in the cart list.
+1. To save a copy of your cart, select `Back up flash`, then press `A` to start. Your dump is saved to `cart-backups` on the SD card.
+1. To write a flashrom back, select `Write flash`, pick your `.bin` file, then input the key combo to proceed.
+1. Wait until the progress bar finishes, then press `A`.
+
+> [!TIP]
+> Keep a copy of your first dump somewhere off the SD card. Dumping the same cart again overwrites the old file.
+
+## Supported carts
+
+Ace3DS+, Acekard 2i, DSTT, R4i Gold 3DS, R4iSDHC family, and R4 SDHC Dual-Core (DSi mode only).
+
+`Sanras`'s [flashcart guide](https://sanrax.github.io/flashcart-guides/) covers which retail carts these map to, and has a full walkthrough for [changing a flashcart's banner](https://sanrax.github.io/flashcart-guides/tutorials/icon-change/) using this tool.
+
+> [!CAUTION]
+> **Breaks stock DSi/3DS compatibility**
+>
+> Changing the icon or banner text of a flashcart will cause it to be blocked by DSi and 3DS firmware, *unless* CFW (Custom Firmware) is installed on the console. NDS and DS Lite are not affected by this, as they do not do any integrity checks on the game being loaded.
+>
+> This only applies to banners you have changed. Restoring your own untouched backup is fine.
+
+> [!WARNING]
+> Not every cart has been tested. If you can't dump the flashrom for your cart, or the resulting dump is nonsense, STOP and do not proceed any further. [Open an issue](https://github.com/tasken/Cart-Flasher/issues) and provide information about your cart and setup.
+>
+> Use real hardware. Emulators can't emulate a flashcart, so a detection there means nothing even when it looks like it worked.
+>
+> And as always, flashing carts and modifying firmware carries a risk. We are not responsible for any damage that may occur, such as bricked carts.
+
+## Reporting a problem
+
+1. Press `Y` on the cart list until the log reads `DEBUG`.
+1. Do the thing that went wrong again.
+1. Power off, and grab `cart_flasher.log` from the root of your SD card.
+1. [Open an issue](https://github.com/tasken/Cart-Flasher/issues) with the log attached, which cart you have, and how you launched Cart-Flasher.
+
+> [!NOTE]
+> If you saw `SD card init failed!`, there is no log to send. Take a photo of the screen and attach that instead.
 
 ## Building
 
@@ -32,9 +70,9 @@ This builds inside Docker (BlocksDS toolchain included) and produces `cart_flash
     *   [flashcart_core](https://github.com/ntrteam/flashcart_core) by `ntrteam`, for the per-flashcart device drivers
     *   [libncgc](https://github.com/angelsl/libncgc) by `angelsl`, for the NTR/CTR card protocol layer
 
-Special thanks to [Sanras](https://github.com/Sanrax) for feedback and pre-release testing.
+Special thanks to `Sanras` for feedback and pre-release testing, and make sure to check out his [flashcart guide](https://sanrax.github.io/flashcart-guides/).
 
-The button-combo confirmation before any destructive flash operation is styled after [GodMode9](https://github.com/d0k3/GodMode9)'s `d0k3` prompt.
+The key combo confirmation before writing to a cart is styled after `d0k3`'s [GodMode9](https://github.com/d0k3/GodMode9) unlock sequence prompt.
 
 ## License
 
