@@ -14,7 +14,6 @@ DATA		:= data
 DEFINES		:= -DARM9 \
 		   -DCART_FLASHER_VERSION=\"$(CART_FLASHER_VERSION)\" \
 		   -DCART_FLASHER_COMMIT=\"$(CART_FLASHER_COMMIT)\" \
-		   -DFLASHCART_CORE_VERSION=\"v1.1.0-1-gb20f7f6-vendored\" \
 		   -DNCGC_PLATFORM_NTR
 
 ifneq ($(strip $(testing)),)

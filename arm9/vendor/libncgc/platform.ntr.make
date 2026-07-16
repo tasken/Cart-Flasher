@@ -1,17 +1,12 @@
-ifneq ($(strip $(BLOCKSDS)),)
-# BlocksDS build
+ifeq ($(strip $(BLOCKSDS)),)
+$(error "Please set BLOCKSDS in your environment")
+endif
 WONDERFUL_TOOLCHAIN	?= /opt/wonderful
 ARM_NONE_EABI_PATH	?= $(WONDERFUL_TOOLCHAIN)/toolchain/gcc-arm-none-eabi/bin/
 PREFIX		?= $(ARM_NONE_EABI_PATH)arm-none-eabi-
 CC		:= $(PREFIX)gcc
 CXX		:= $(PREFIX)g++
 AR		:= $(PREFIX)ar
-else
-ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM or BLOCKSDS in your environment")
-endif
-include $(DEVKITARM)/base_tools
-endif
 
 ARCH		:=	-marm -mthumb-interwork -masm-syntax-unified
 ARCHFLAGS	:=	-march=armv5te -mtune=arm946e-s \
