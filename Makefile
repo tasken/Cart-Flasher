@@ -33,13 +33,29 @@ export NDS_OUT := $(TARGET)-$(CART_FLASHER_BRANCH)-$(CART_FLASHER_COMMIT).nds
 endif
 export TOPDIR := $(CURDIR)
 
+# Build provenance label shown on the boot splash alongside the raw commit --
+# distinct from BANNER_VERSION below, which mixes provenance with either a
+# commit or a tag depending on the build. Nightly/release CI override this to
+# Nightly/Release; this default only ever applies to local builds.
+CART_FLASHER_BUILD_KIND ?= Local
+export CART_FLASHER_BUILD_KIND
+
 GAME_TITLE     := Cart-Flasher
 GAME_AUTHOR    := @tasken
 GAME_ICON      := resources/icon.png
 
-# Banner version line: release builds pass BANNER_VERSION=<tag> explicitly;
-# everything else (nightlies, local builds) shows the commit.
-BANNER_VERSION ?= Commit: $(CART_FLASHER_COMMIT)
+# Banner version line: labeled with the build's provenance, since the same
+# commit can be packaged three different ways (local hand-build, automated
+# nightly, tagged release) and the banner is the one place that survives once
+# a .nds file is copied off its filename. Nightly/release CI pass
+# BANNER_VERSION explicitly; these defaults only ever apply to local builds.
+# A non-main branch is folded into NDS_OUT above -- fold it into the banner
+# too, or a local build off a feature branch looks identical to one off main.
+ifeq ($(CART_FLASHER_BRANCH),main)
+BANNER_VERSION ?= Local: $(CART_FLASHER_COMMIT)
+else
+BANNER_VERSION ?= Local ($(CART_FLASHER_BRANCH)): $(CART_FLASHER_COMMIT)
+endif
 GAME_FULL_TITLE := $(GAME_TITLE);Developed by $(GAME_AUTHOR);$(BANNER_VERSION)
 
 # Source code paths

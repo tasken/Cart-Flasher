@@ -37,7 +37,7 @@ void print_boot_msg(void)
 	// Spacing of 1 empty line after welcome message. A/B instructions at row 13.
 	DrawString(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 13, COLOR_YELLOW, "<A> Continue   <B> Power off");
 	// Spacing of 2 empty lines after A/B instructions. Credits at row 16.
-	DrawStringF(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 16, COLOR_GREY, "Developed by @tasken\nCommit: %s\nOriginal by jason0597 & DS-Homebrew", CART_FLASHER_COMMIT);
+	DrawStringF(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 16, COLOR_GREY, "Developed by @tasken\n%s build - Commit: %s\nOriginal by jason0597 & DS-Homebrew", CART_FLASHER_BUILD_KIND, CART_FLASHER_COMMIT);
 
 	while (true)
 	{
