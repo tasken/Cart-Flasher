@@ -22,14 +22,25 @@ jobs:
         uses: actions/checkout@v7
       - name: Build app
         id: build
-        # NDS_OUT is pinned so nightly filenames are always
-        # cart_flasher-nightly-<commit>.nds -- the "nightly" marker keeps an
-        # automated build from ever sharing a name with a local hand-build
-        # (cart_flasher-<commit>.nds) of the same commit. The Makefile's
-        # branch-name suffix is for local builds only.
+        env:
+          # Via env:, not interpolated directly -- a crafted branch/PR name
+          # must not get re-parsed as shell syntax.
+          RAW_BRANCH: ${{ github.head_ref || github.ref_name }}
+        # NDS_OUT: cart_flasher-nightly-<commit>.nds on main, else
+        # cart_flasher-<branch>-nightly-<commit>.nds -- this job builds every
+        # branch/PR, so without it two nightlies built the same day were only
+        # distinguishable by hash.
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          make NDS_OUT=cart_flasher-nightly-$SHORT_SHA.nds CART_FLASHER_COMMIT=$SHORT_SHA CART_FLASHER_VERSION=nightly BANNER_VERSION="Nightly: $SHORT_SHA" CART_FLASHER_BUILD_KIND=Nightly
+          BRANCH=$(echo "$RAW_BRANCH" | tr '/' '-')
+          if [ "$BRANCH" = "main" ]; then
+            NDS_NAME="cart_flasher-nightly-$SHORT_SHA.nds"
+            BANNER="Nightly: $SHORT_SHA"
+          else
+            NDS_NAME="cart_flasher-$BRANCH-nightly-$SHORT_SHA.nds"
+            BANNER="Nightly ($BRANCH): $SHORT_SHA"
+          fi
+          make NDS_OUT="$NDS_NAME" CART_FLASHER_COMMIT=$SHORT_SHA CART_FLASHER_VERSION=nightly BANNER_VERSION="$BANNER" CART_FLASHER_BUILD_KIND=Nightly
       - name: Publish build to GH Actions
         uses: actions/upload-artifact@v7
         with:
