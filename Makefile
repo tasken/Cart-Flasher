@@ -6,21 +6,13 @@ BLOCKSDS	?= /opt/blocksds/core
 BLOCKSDSEXT	?= /opt/blocksds/external
 
 export TARGET := cart_flasher
-# Every local build is a dev build, full stop -- no need to distinguish a
-# clean checkout from a dirty one here (git diff --quiet only sees tracked
-# files anyway, so it never covered untracked adds). This -dev marker is
-# static and applies uniformly wherever CART_FLASHER_COMMIT is used: filename,
-# banner, splash. CI (nightly/release) overrides CART_FLASHER_COMMIT on the
-# command line, so this default -- and its -dev suffix -- never reaches them.
-# This repo's tags are lightweight, so plain describe (no --tags) skips them
-# and always falls back to the bare hash -- keep it that way, or an annotated
-# tag would turn this into a tag-relative string.
-CART_FLASHER_COMMIT ?= $(shell git describe --always --abbrev=7 2>/dev/null || echo unknown)-dev
+# Local builds are always "dev" builds -- no clean/dirty distinction. Prefix,
+# not suffix, to match nightly's cart_flasher-nightly-<hash>.nds. CI overrides
+# this on the command line.
+CART_FLASHER_COMMIT ?= dev-$(shell git describe --always --abbrev=7 2>/dev/null || echo unknown)
 export CART_FLASHER_COMMIT
-# No tag is reachable from HEAD in a shallow clone (actions/checkout's default
-# without fetch-depth: 0) or a source archive with no .git at all -- "unknown"
-# admits that, instead of stamping every such build with the same stale hardcoded
-# release tag regardless of how far the tree has actually moved on.
+# Falls back to "unknown" (not a stale hardcoded version) when no tag is
+# reachable, e.g. a shallow clone or a source archive with no .git.
 CART_FLASHER_VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo unknown)
 export CART_FLASHER_VERSION
 CART_FLASHER_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
@@ -33,28 +25,22 @@ export NDS_OUT := $(TARGET)-$(CART_FLASHER_BRANCH)-$(CART_FLASHER_COMMIT).nds
 endif
 export TOPDIR := $(CURDIR)
 
-# Build provenance label shown on the boot splash alongside the raw commit --
-# distinct from BANNER_VERSION below, which mixes provenance with either a
-# commit or a tag depending on the build. Nightly/release CI override this to
-# Nightly/Release; this default only ever applies to local builds.
-CART_FLASHER_BUILD_KIND ?= Local
+# Build provenance shown on the splash. "Dev" to match CART_FLASHER_COMMIT's
+# dev- prefix above. CI overrides to Nightly/Release.
+CART_FLASHER_BUILD_KIND ?= Dev
 export CART_FLASHER_BUILD_KIND
 
 GAME_TITLE     := Cart-Flasher
 GAME_AUTHOR    := @tasken
 GAME_ICON      := resources/icon.png
 
-# Banner version line: labeled with the build's provenance, since the same
-# commit can be packaged three different ways (local hand-build, automated
-# nightly, tagged release) and the banner is the one place that survives once
-# a .nds file is copied off its filename. Nightly/release CI pass
-# BANNER_VERSION explicitly; these defaults only ever apply to local builds.
-# A non-main branch is folded into NDS_OUT above -- fold it into the banner
-# too, or a local build off a feature branch looks identical to one off main.
+# Banner version line, labeled with build provenance. CI passes
+# BANNER_VERSION explicitly; this default is for local builds only. Branch is
+# folded in on non-main so a feature-branch build doesn't look like main's.
 ifeq ($(CART_FLASHER_BRANCH),main)
-BANNER_VERSION ?= Local: $(CART_FLASHER_COMMIT)
+BANNER_VERSION ?= Dev: $(CART_FLASHER_COMMIT)
 else
-BANNER_VERSION ?= Local ($(CART_FLASHER_BRANCH)): $(CART_FLASHER_COMMIT)
+BANNER_VERSION ?= Dev ($(CART_FLASHER_BRANCH)): $(CART_FLASHER_COMMIT)
 endif
 GAME_FULL_TITLE := $(GAME_TITLE);Developed by $(GAME_AUTHOR);$(BANNER_VERSION)
 
