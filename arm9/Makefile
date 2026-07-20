@@ -83,10 +83,9 @@ DEPS		:= $(OBJS_SOURCES:.o=.d)
 
 all: $(ELF)
 
-# libncgc tracks its own sources incrementally, but without a prerequisite the
-# outer make skips this rule entirely once lib/libncgc.a exists, silently
-# ignoring edits to libncgc. Delegate every build; it's a no-op when nothing
-# changed, and only re-copies (bumping the timestamp) when a source actually did.
+# Without a prerequisite, make would skip this once lib/libncgc.a exists and
+# silently ignore libncgc edits. Delegating every build is a no-op when
+# nothing changed.
 $(LIBNCGC)/lib/libncgc.a: force_libncgc
 	@$(MAKE) PLATFORM=ntr -C $(LIBNCGC) fordka
 

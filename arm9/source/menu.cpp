@@ -8,10 +8,8 @@
 #include <cstdio>
 #include <cstdlib> // rand(); the seed itself lives in main()
 
-// Wording follows Sanras's flashcart guide, which documents this tool: its
-// terms are "flashrom" (not flash/memory), "key combo", "bricked", and "NDS".
-// The `Back up flash` / `Write flash` menu labels are quoted verbatim by that
-// guide, so they must not be reworded.
+// Wording follows Sanras's flashcart guide, which quotes this tool verbatim
+// ("flashrom", "key combo", "Back up flash", "Write flash") -- don't reword.
 #define bootmsg "This tool writes directly to your\n" 					\
 				"flashcart's flashrom. A bad write\n" 					\
 				"can brick your cart, so always keep\n" 				\
@@ -34,9 +32,7 @@ void print_boot_msg(void)
 	sprintf(header_title, "Cart-Flasher %s", CART_FLASHER_VERSION);
 	DrawHeader(TOP_SCREEN, header_title, ((SCREEN_WIDTH - (strlen(header_title) * FONT_WIDTH)) / 2));
 	DrawString(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, bootmsg);
-	// Spacing of 1 empty line after welcome message. A/B instructions at row 13.
 	DrawString(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 13, COLOR_YELLOW, "<A> Continue   <B> Power off");
-	// Spacing of 2 empty lines after A/B instructions. Credits at row 16.
 	DrawStringF(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 16, COLOR_GREY, "Developed by @tasken\n%s build - Commit: %s\nOriginal by jason0597 & DS-Homebrew", CART_FLASHER_BUILD_KIND, CART_FLASHER_COMMIT);
 
 	while (true)
@@ -120,10 +116,8 @@ void menu_lvl1(Flashcart* cart)
 	DrawStringF(BOTTOM_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, "%s\n\n%s", flashcart_list->at(0)->getAuthor(), flashcart_list->at(0)->getDescription());
 	u32 flashcart_list_size = flashcart_list->size();
 
-	// Draw the list once up front; the loop below only redraws it when the
-	// selection or screen actually changes, instead of every single frame.
-	// (Every frame would mean redrawing full-width highlight-bar rectangles
-	// with no vsync, which tears visibly on real hardware.)
+	// Redraws only on change, not every frame -- full-width highlight bars
+	// redrawn every frame with no vsync tear visibly on hardware.
 	for (u32 i = 0; i < flashcart_list_size; i++)
 	{
 		DrawListRow(TOP_SCREEN, (i + 2) * FONT_HEIGHT, i == menu_sel, COLOR_ACCENT, flashcart_list->at(i)->getName());
@@ -153,16 +147,13 @@ void menu_lvl1(Flashcart* cart)
 				global_loglevel++;
 			}
 			DrawFooter(global_loglevel);
-			// Entering DEBUG snapshots the hardware state into the log, so
-			// every debug capture starts with the launch mode, real CPU speed
-			// and cart-bus ownership without needing a special build. It also
-			// goes on screen, which is the only copy that exists when the SD
-			// card is what failed.
+			// Entering DEBUG snapshots hardware state (launch mode, CPU speed,
+			// cart-bus ownership) to the log and screen -- the screen copy is
+			// all that exists if the SD card itself is what failed.
 			if (global_loglevel == 0) {
-				// The probe owns the bottom screen until dismissed, but its prompt
-				// goes on the top screen's footer row, where every other screen puts
-				// them. Blanking first is required: the footer it replaces is longer,
-				// so drawing straight over it would leave the tail behind.
+				// Prompt goes on the top footer row like every other screen.
+				// Blanking first is required -- the footer it replaces is
+				// longer, so drawing over it would leave a stale tail.
 				DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
 				DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_YELLOW, "<B> Back to the cart list");
 				DrawHeader(BOTTOM_SCREEN, "Hardware probe", ((SCREEN_WIDTH - (strlen("Hardware probe") * FONT_WIDTH)) / 2));
@@ -176,26 +167,24 @@ void menu_lvl1(Flashcart* cart)
 		{
 			cart = flashcart_list->at(menu_sel); //Set the cart equal to whatever we had selected from before
 			if (isDSiMode() || strcmp(cart->getShortName(), "DSTT") == 0) {
-				// init() is __ncgc_must_check. Not fatal on its own -- initialize()
-				// below fails too and shows the detection error -- but the reason
-				// only exists here, so log it rather than discarding it. Turning on
-				// DEBUG then re-trying is the whole diagnostic workflow.
+				// __ncgc_must_check. Not fatal here -- initialize() below fails
+				// too and shows the detection error -- but the reason only
+				// exists here, so log it instead of discarding it.
 				const Err err = card.init();
 				if (err) {
 					platform::logMessage(LOG_ERR, "menu: card.init failed: %s", err.desc());
 				}
 			} else {
 				// DS mode, non-DSTT: assume the cart's own menu already took the
-				// card through KEY1 and left it in KEY2, so just record that state
-				// without redoing the handshake. Launching via nds-bootstrap breaks
-				// the assumption -- detection then fails with no KEY2 to inherit.
+				// card through KEY1 into KEY2, so just record that instead of
+				// redoing the handshake. Breaks under nds-bootstrap -- no KEY2
+				// to inherit there.
 				card.state(NTRState::Key2);
 			}
 			if (!cart->initialize(&card)) //If cart initialization fails, do all this and then break to main menu
 			{
-				// One blank row under the last cart. The list starts at row 2 and
-				// its length varies (R4iSDHC.hk is hidden outside DSi mode), so a
-				// fixed row would sit flush against the list in DSi mode.
+				// One row past the last cart -- fixed would sit flush against
+				// the list in DSi mode, since R4iSDHC.hk is hidden outside it.
 				const int errorRow = flashcart_list_size + 3;
 				// Only <B> is accepted below, so blank the footer rather than leave
 				// it offering <A>/<Y>. The <B> handler calls DrawFooter to restore it.
@@ -278,18 +267,14 @@ void menu_lvl2(Flashcart* cart)
 				// clears the file browser off the screen while it's at it.
 			}
 
-			// The confirm takes the whole screen: once you're deciding, the menu you
-			// came from is just noise, and DrawHeader clears it (footer included)
-			// for free. Both blocks are 10 rows and centre at row 5, so the two
-			// paths line up with each other; WARN_X centres the widest warning line
-			// and the prompt/combo centre on their own. Rows below are the result of
-			// that, not magic.
+			// Confirm takes the whole screen -- DrawHeader clears the menu
+			// behind it (footer included) for free. Both paths are 10 rows
+			// centred at row 5; the row numbers below follow from that.
 			//
-			// Only writing gets the random-combo gate. Reading can't harm the cart:
-			// no driver reaches an erase or program command from readFlash, and
-			// AK2i's even re-locks the flash before it reads. Gating the safe
-			// operation just as heavily would train people to mash through the
-			// combo before it shows up on the one that does destroy data.
+			// Only writing is gated behind the combo: reading can't damage the
+			// cart (no driver reaches erase/program from readFlash), and
+			// gating it the same way would train people to mash through the
+			// combo before the destructive path.
 			DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
 			const int WARN_X = 4 * FONT_WIDTH;
 			bool confirmed;
@@ -302,9 +287,9 @@ void menu_lvl2(Flashcart* cart)
 			}
 			else
 			{
-				// The banner/icon note lives only on the write path: restoring an
-				// untouched dump leaves the banner byte-identical, so it can't
-				// break stock DSi/3DS loading.
+				// Banner/icon note is write-only: restoring an untouched dump
+				// leaves the banner byte-identical, so it can't break stock
+				// DSi/3DS loading.
 				DrawString(TOP_SCREEN, WARN_X, (5 * FONT_HEIGHT), COLOR_WHITE,
 					"This overwrites the cart's flashrom\nand can't be undone.\n\nA changed icon or banner is blocked\nby stock DSi/3DS firmware unless CFW\nis installed. NDS/DS Lite are fine.");
 				DrawStringCentered(TOP_SCREEN, (12 * FONT_HEIGHT), COLOR_YELLOW, "Enter the key combo to confirm:");
@@ -368,34 +353,30 @@ void menu_lvl2(Flashcart* cart)
 						break;
 					}
 			}
-			// No "nothing was touched" screen on the way out: <B> is the cancel
-			// key on both prompts, so the user already knows they backed out.
-			// A mistyped combo says its piece in the retry loop above.
+			// No "nothing was touched" screen: <B> already means cancel on both
+			// prompts. A mistyped combo has its own message in the retry loop.
 			break;
 		}
 	}
 }
 
-//Will print out a gm9/sb9si like "input button combo to continue" prompt, also does the button checking for it
-//The RNG is seeded once in main(), not here
-
+// Prints a GodMode9-style "input this combo" prompt and checks the presses.
 const char rancombo_symbols[5] = { '\x1B', '\x18', '\x1A', '\x19', 'A' }; // Left, Up, Right, Down
 const u32 rancombo_inputs[5] = { KEY_LEFT, KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_A };
 
 bool d0k3_buttoncombo(int cur_r)
 {
-	// The combo is always 5 slots wide, so it can centre itself rather than make
-	// every caller work the column out: 4 slots advance by 4 chars, the last one
-	// draws '<', symbol, '>' with no trailing gap.
+	// Always 5 slots wide, so it centres itself instead of making callers work
+	// the column out; the last slot has no trailing gap.
 	const int combo_width = (4 * (4 * FONT_WIDTH)) + (3 * FONT_WIDTH);
 	const int cur_c = (SCREEN_WIDTH - combo_width) / 2;
 
-	// Seeded once in main(), never here: re-seeding per call from time(NULL) tied
-	// the combo to the clock second instead of advancing the sequence.
+	// Seeded once in main(), not here -- re-seeding per call from time(NULL)
+	// tied the combo to the clock second instead of advancing it.
 	//
-	// No symbol may repeat back-to-back, same as GodMode9 (ui.c: `while (lsh ==
-	// lastlsh) lsh = (PRNG & 0x3)`). A doubled arrow is easy to misread as one,
-	// and it keeps the double-tap tolerance below unambiguous.
+	// No symbol repeats back-to-back, matching GodMode9 (ui.c: `while (lsh ==
+	// lastlsh) lsh = (PRNG & 0x3)`) -- doubled arrows misread as one, and this
+	// keeps the double-tap tolerance below unambiguous.
 	int num_rancombo[5] = { 0, 0, 0, 0, 4 }; // zero based, '4' is the 5th item (A)
 	int last_symbol = -1;
 	for (int i = 0; i < 4; i++) {
@@ -412,7 +393,7 @@ bool d0k3_buttoncombo(int cur_r)
 	for (int i = 0; i < 5; i++) {
 		check_rancombo[i] = rancombo_inputs[num_rancombo[i]];
 	}
-	int depth = 0; //How far in we are, how many buttons have been pressed so far, how *deep* we are
+	int depth = 0; // combo progress, 0-based
 
 	while (true) {
 		int temp_c = cur_c;
@@ -432,23 +413,19 @@ bool d0k3_buttoncombo(int cur_r)
 				return false;
 			}
 			else if (depth > 0 && (keysDown() & check_rancombo[depth - 1])) {
-				// Re-pressing the button that was just accepted is a double-tap,
-				// not a mistake, so don't punish it. GodMode9 forgives the same
-				// case (ui.c: `!(pad_state & sequence[lvl-1])`). Unambiguous
-				// because no symbol repeats back-to-back, and it only suppresses
-				// a reset -- it never advances the combo.
+				// Double-tap forgiveness, matching GodMode9 (ui.c: `!(pad_state &
+				// sequence[lvl-1])`). Safe since no symbol repeats back-to-back;
+				// this only suppresses a reset, it never advances the combo.
 			}
 			else {
-				// Say what went wrong instead of silently rewinding to depth 0 --
-				// GodMode9 resets in place, but a combo that quietly restarts
-				// looks identical to one that isn't registering presses at all.
-				// The combo itself is NOT re-rolled: it was generated once above,
-				// so a retry redraws the same glyphs in place and asks the user
-				// for attention, not for memory.
+				// Says what went wrong instead of silently rewinding -- a silent
+				// reset looks identical to presses not registering. The combo
+				// isn't re-rolled (generated once above), so a retry redraws the
+				// same glyphs.
 				//
-				// Two rows under the combo, so it keeps its blank separator
-				// wherever the caller placed it. Red says what went wrong, yellow
-				// offers the choice -- the same split every other screen uses.
+				// Two rows under the combo, keeping its blank separator. Red
+				// states the problem, yellow offers the choice, matching every
+				// other screen's split.
 				const int msg_r = cur_r + (2 * FONT_HEIGHT);
 				DrawStringCentered(TOP_SCREEN, msg_r, COLOR_RED, "Wrong key combo, nothing was touched.");
 				DrawStringCentered(TOP_SCREEN, msg_r + FONT_HEIGHT, COLOR_YELLOW, "<A> Retry   <B> Cancel");

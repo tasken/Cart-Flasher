@@ -98,11 +98,8 @@ void DrawListRow(u16 *screen, int y, bool selected, u16 highlightColor, const ch
 	DrawString(screen, FONT_WIDTH, y, selected ? COLOR_BLACK : COLOR_WHITE, text);
 }
 
-// A single plain-text footer line, matching the button-hint style used on
-// every other screen. No end user needs to see the app/submodule version or
-// a permanently-visible log-level readout on the main flashcart list — that
-// used to eat 3 rows (~15% of the screen) in a solid grey box. Version info
-// now lives on the boot screen instead (seen once, not on every frame).
+// Plain button-hint line, matching every other screen -- replaces a
+// permanent 3-row grey status box; version info moved to the boot screen.
 void DrawFooter(int loglevel)
 {
 	DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);

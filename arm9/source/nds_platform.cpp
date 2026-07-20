@@ -52,23 +52,18 @@ namespace flashcart_core {
 		{
 			if (priority < global_loglevel) { return 0; }
 
-			// mount_fat() only needs to run once: main() already calls
-			// fatInitDefault() at startup and unmount_fat() is a no-op, so FAT
-			// stays mounted for the program's lifetime. Re-running it on every
-			// call (2x access() + mkdir()) was avoidable overhead on top of the
-			// fopen()/fclose() below.
+			// FAT stays mounted for the program's lifetime (main() already
+			// mounted it, unmount_fat() is a no-op) -- avoids redundant
+			// access()+mkdir() on every log call.
 			static bool mounted = false;
 			if (!mounted) {
 				if (mount_fat() != ALL_OK) { return -1; }
 				mounted = true;
 			}
 
-			// The file must be closed on every call: on BlocksDS's FatFs-backed
-			// filesystem, a file's size in its directory entry is only committed
-			// by fclose() -- neither fflush() nor fsync() reliably did it here in
-			// testing, even though fat_fsync()/f_sync() exist in the syscall table.
-			// Keeping the file open for the program's lifetime (an earlier version
-			// of this fix) made LOG_DEBUG-heavy dumps fast but left the log file's
+			// Must close on every call: on BlocksDS's FatFs, a file's size is
+			// only committed by fclose() -- fflush()/fsync() didn't do it in
+			// testing. Keeping the file open (tried first) left the log's
 			// reported size at 0 bytes forever.
 			static bool first_open = true;
 			FILE *logfile = fopen("/cart_flasher.log", first_open ? "w" : "a");
@@ -112,17 +107,14 @@ namespace flashcart_core {
 	}
 }
 
-// Hardware-state probe, logged whenever the user switches the log level to
-// DEBUG: launch mode, CPU/SCFG state, a timer-calibrated busy-wait measurement
-// (the timer ticks at the fixed 33.5MHz bus clock, so ~8200 ticks means the
-// ARM9 runs at 67MHz, ~4100 means 134MHz regardless of whether SCFG is
-// readable), and the cart-bus registers. EXMEMCNT bit 11 set means the ARM7
-// owns Slot-1 and every ARM9-side cart access reads open-bus 0xFFFFFFFF (the
-// BlocksDS DLDI-on-ARM7 failure mode that broke DS-mode detection).
+// Hardware-state probe, logged when the log level switches to DEBUG. The
+// timer measurement is CPU-speed-independent: it ticks at the fixed 33.5MHz
+// bus clock, so ~8200 ticks means 67MHz, ~4100 means 134MHz, regardless of
+// whether SCFG is readable. EXMEMCNT bit 11 set means the ARM7 owns Slot-1,
+// the BlocksDS DLDI-on-ARM7 failure mode that broke DS-mode detection.
 //
-// Goes to the log *and* the bottom screen, because the two failures worth
-// debugging are opposites: a cart that won't detect leaves a readable log, while
-// an SD card that won't mount leaves none at all.
+// Goes to the log *and* the screen: a cart that won't detect leaves a
+// readable log, but an SD card that won't mount leaves none at all.
 void LogHardwareProbe(int firstRow)
 {
 	TIMER0_CR = 0;
@@ -259,10 +251,8 @@ return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
 		return FILE_OPEN_FAILED;
 	}
 
-	// Validate the file size before touching the cart. The old full-buffer
-	// code read the whole file up front, so a truncated file failed before a
-	// single byte was flashed; streaming would otherwise only notice mid-loop,
-	// aborting with the cart's firmware half overwritten.
+	// Validate size before touching the cart -- streaming would otherwise only
+	// notice a truncated file mid-loop, aborting with the firmware half overwritten.
 	fseek(FileIn, 0, SEEK_END);
 	long fileSize = ftell(FileIn);
 	rewind(FileIn);
