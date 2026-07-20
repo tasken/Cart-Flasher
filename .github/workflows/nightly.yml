@@ -27,12 +27,12 @@ jobs:
           # must not get re-parsed as shell syntax.
           RAW_BRANCH: ${{ github.head_ref || github.ref_name }}
         # NDS_OUT: cart_flasher-nightly-<commit>.nds on main, else
-        # cart_flasher-<branch>-nightly-<commit>.nds -- this job builds every
-        # branch/PR, so without it two nightlies built the same day were only
-        # distinguishable by hash.
+        # cart_flasher-<branch>-nightly-<commit>.nds. BRANCH is whitelisted to
+        # [A-Za-z0-9._-] since it's later spliced unescaped into the
+        # ndstool recipe's shell command via `make`.
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          BRANCH=$(echo "$RAW_BRANCH" | tr '/' '-')
+          BRANCH=$(echo "$RAW_BRANCH" | tr '/' '-' | tr -cd 'A-Za-z0-9._-')
           if [ "$BRANCH" = "main" ]; then
             NDS_NAME="cart_flasher-nightly-$SHORT_SHA.nds"
             BANNER="Nightly: $SHORT_SHA"

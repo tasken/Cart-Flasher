@@ -15,8 +15,12 @@ export CART_FLASHER_COMMIT
 # reachable, e.g. a shallow clone or a source archive with no .git.
 CART_FLASHER_VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo unknown)
 export CART_FLASHER_VERSION
-CART_FLASHER_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
-# Branch names may contain '/', which would break the output path.
+# Branch names can legally contain shell metacharacters (" $ ( ) ` ;) that
+# Make would splice unescaped into the ndstool recipe below. Filtered to a
+# safe whitelist in this same shell call -- filtering again in a later
+# $(shell ...) would just re-paste the unsafe text into a new shell command.
+CART_FLASHER_BRANCH ?= $(shell BRANCH=$$(git rev-parse --abbrev-ref HEAD 2>/dev/null); if [ -z "$$BRANCH" ]; then echo unknown; else printf '%s' "$$BRANCH" | tr -cd 'A-Za-z0-9._/-'; fi)
+# '/' would break the output path.
 CART_FLASHER_BRANCH := $(subst /,-,$(CART_FLASHER_BRANCH))
 ifeq ($(CART_FLASHER_BRANCH),main)
 export NDS_OUT := $(TARGET)-$(CART_FLASHER_COMMIT).nds
