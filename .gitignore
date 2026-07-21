@@ -10,3 +10,12 @@ maker.sh
 *._
 __pycache__/
 *.pyc
+
+# Shared Brain & Agent Environment Files
+.env
+.env.local
+.claude/
+.cursor/
+.copilot/
+.gemini/
+.opencode/
