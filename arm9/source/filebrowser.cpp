@@ -121,7 +121,7 @@ void RenderList(const char* currentPath, const std::vector<FileEntry>& entries, 
 		DrawString(TOP_SCREEN, FONT_WIDTH, emptyMsgY, COLOR_GREY, "No .bin files in this folder yet.");
 	}
 
-	DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_YELLOW, "<A> Open/Pick file   <B> Back");
+	DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_YELLOW, "<A> Select   <B> Back");
 }
 
 } // namespace
