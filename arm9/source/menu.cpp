@@ -166,6 +166,22 @@ void menu_lvl1(Flashcart* cart)
 		if (keysDown() & KEY_A)
 		{
 			cart = flashcart_list->at(menu_sel); //Set the cart equal to whatever we had selected from before
+
+			// One row past the last cart -- fixed would sit flush against the
+			// list in DSi mode, since R4iSDHC.hk is hidden outside it. Also
+			// reused by the detection-error message below, which overwrites
+			// this same row once it's known whether detection succeeded.
+			const int errorRow = flashcart_list_size + 3;
+
+			// card.init()/cart->initialize() below do real SPI/cart-bus probing,
+			// which can take a noticeable moment -- without this, the screen just
+			// sits on the list with no sign the button press registered, which
+			// reads as a freeze rather than a wait. White, in the content area:
+			// matches every other in-progress status line in this app (e.g.
+			// DumpFlash/WriteFlash's "Backing up.../Writing to..."). Yellow is
+			// reserved for button prompts everywhere else, never plain status.
+			DrawStringF(TOP_SCREEN, FONT_WIDTH, errorRow * FONT_HEIGHT, COLOR_WHITE, "Detecting %s...", cart->getName());
+
 			if (isDSiMode() || strcmp(cart->getShortName(), "DSTT") == 0) {
 				// __ncgc_must_check. Not fatal here -- initialize() below fails
 				// too and shows the detection error -- but the reason only
@@ -183,15 +199,17 @@ void menu_lvl1(Flashcart* cart)
 			}
 			if (!cart->initialize(&card)) //If cart initialization fails, do all this and then break to main menu
 			{
-				// One row past the last cart -- fixed would sit flush against
-				// the list in DSi mode, since R4iSDHC.hk is hidden outside it.
-				const int errorRow = flashcart_list_size + 3;
-				// Only <B> is accepted below, so blank the footer rather than leave
-				// it offering <A>/<Y>. The <B> handler calls DrawFooter to restore it.
-				DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
-				DrawString(TOP_SCREEN, FONT_WIDTH, errorRow * FONT_HEIGHT, COLOR_RED, "Couldn't detect this flashcart.\nCheck it's inserted firmly.");
-				DrawString(TOP_SCREEN, FONT_WIDTH, (errorRow + 3) * FONT_HEIGHT, COLOR_YELLOW, "<B> Back to the list");
-				while (true) { scanKeys(); if (keysDown() & KEY_B) { DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREEN_WIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2)); DrawFooter(global_loglevel); break; } }
+				// Overwrites the "Detecting..." line above -- blanked first since
+				// the error's own first line isn't guaranteed longer than every
+				// possible "Detecting <cart name>..." line.
+				DrawRectangle(TOP_SCREEN, 0, errorRow * FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
+				// Message and "press <B>" instruction combined into one red
+				// string, matching every error case in menu_lvl2's switch below.
+				DrawString(TOP_SCREEN, FONT_WIDTH, errorRow * FONT_HEIGHT, COLOR_RED, "Couldn't detect this flashcart.\nCheck it's inserted firmly, then\npress <B> to go back.");
+				WaitPress(KEY_B);
+				ClearScreen(TOP_SCREEN, COLOR_BLACK);
+				DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREEN_WIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2));
+				DrawFooter(global_loglevel);
 				reprintFlag = true;
 			}
 			else
