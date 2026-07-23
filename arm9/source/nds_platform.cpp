@@ -48,16 +48,26 @@ namespace flashcart_core {
 			ShowProgress(BOTTOM_SCREEN, current, total, status);
 		}
 
-		int logMessage(log_priority priority, const char *fmt, ...)
+		// Opens /cart_flasher.log for one or more writeLogLine() calls sharing a
+		// single open/close bracket. logMessage() below opens/closes once per
+		// call, which is fine for isolated calls -- but LogHardwareProbe()'s
+		// three related lines land close enough together that BlocksDS's FatFs
+		// hadn't finished committing one fclose()'s file size before the very
+		// next fopen("a") reopened the same path microseconds later: that write
+		// landed at a stale (too-small) offset and stomped part of the previous
+		// line's own tail bytes. Confirmed via hexdump -- a repeated
+		// hardware-probe dump left "0262" and "AUXSPIC" fragments of the prior
+		// write's tail sitting mid-file, immediately followed by unrelated
+		// content with no newline between them. Batching into one bracket
+		// removes the reopen between them entirely.
+		static FILE *openLogFileForAppend()
 		{
-			if (priority < global_loglevel) { return 0; }
-
 			// FAT stays mounted for the program's lifetime (main() already
 			// mounted it, unmount_fat() is a no-op) -- avoids redundant
 			// access()+mkdir() on every log call.
 			static bool mounted = false;
 			if (!mounted) {
-				if (mount_fat() != ALL_OK) { return -1; }
+				if (mount_fat() != ALL_OK) { return nullptr; }
 				mounted = true;
 			}
 
@@ -67,11 +77,13 @@ namespace flashcart_core {
 			// reported size at 0 bytes forever.
 			static bool first_open = true;
 			FILE *logfile = fopen("/cart_flasher.log", first_open ? "w" : "a");
-			if (!logfile) { return -1; }
-			first_open = false;
+			if (logfile) { first_open = false; }
+			return logfile;
+		}
 
-			va_list args;
-			va_start(args, fmt);
+		static int writeLogLineV(FILE *logfile, log_priority priority, const char *fmt, va_list args)
+		{
+			if (priority < global_loglevel) { return 0; }
 
 			const char *priority_str;
 			//I use a bunch of if statements here because the array that has strings over at ntrboot_flasher's `platform.cpp` is not available here
@@ -83,12 +95,33 @@ namespace flashcart_core {
 			if (priority >= 5) { priority_str = "?!#$"; }
 
 			char string_to_write[100]; //just do 100, should be enough for any kind of log message we get...
-			sprintf(string_to_write, "[%s]: %s\n", priority_str, fmt);
+			snprintf(string_to_write, sizeof(string_to_write), "[%s]: %s\n", priority_str, fmt);
 
-			int result = vfprintf(logfile, string_to_write, args);
-			fclose(logfile);
+			return vfprintf(logfile, string_to_write, args);
+		}
+
+		static int writeLogLine(FILE *logfile, log_priority priority, const char *fmt, ...)
+		{
+			va_list args;
+			va_start(args, fmt);
+			int result = writeLogLineV(logfile, priority, fmt, args);
+			va_end(args);
+			return result;
+		}
+
+		int logMessage(log_priority priority, const char *fmt, ...)
+		{
+			if (priority < global_loglevel) { return 0; }
+
+			FILE *logfile = openLogFileForAppend();
+			if (!logfile) { return -1; }
+
+			va_list args;
+			va_start(args, fmt);
+			int result = writeLogLineV(logfile, priority, fmt, args);
 			va_end(args);
 
+			fclose(logfile);
 			return result;
 		}
 
@@ -140,15 +173,25 @@ void LogHardwareProbe(int firstRow)
 	// The log carries every field the screen shows, but packed for a log: dense,
 	// one grep-friendly line per group, no colours. logMessage() needs a mounted
 	// SD, so when the mount is what failed only the screen below will have it.
-	flashcart_core::platform::logMessage(flashcart_core::LOG_DEBUG,
-		"probe: dsi=%d SCFG_CLK=0x%04X SCFG_EXT=0x%08lX delayTicks=%u",
-		isDSiMode(), REG_SCFG_CLK, (unsigned long)REG_SCFG_EXT, ticks);
-	flashcart_core::platform::logMessage(flashcart_core::LOG_DEBUG,
-		"probe: EXMEMCNT=0x%04X ROMCTRL=0x%08lX AUXSPICNT=0x%04X cart=%s",
-		REG_EXMEMCNT, (unsigned long)REG_ROMCTRL, REG_AUXSPICNT,
-		arm9OwnsCart ? "ARM9" : "ARM7");
-	flashcart_core::platform::logMessage(flashcart_core::LOG_DEBUG,
-		"probe: DLDI=%s arm7capable=%d name=%s", dldiModeStr, arm7Capable, dldiName);
+	//
+	// These three lines share a single open/close bracket (not three separate
+	// logMessage() calls) -- see openLogFileForAppend()'s comment for why:
+	// reopening the same path in quick succession raced against BlocksDS's
+	// FatFs file-size commit timing and corrupted each write's tail into the
+	// next.
+	FILE *probeLogFile = flashcart_core::platform::openLogFileForAppend();
+	if (probeLogFile) {
+		flashcart_core::platform::writeLogLine(probeLogFile, flashcart_core::LOG_DEBUG,
+			"probe: dsi=%d SCFG_CLK=0x%04X SCFG_EXT=0x%08lX delayTicks=%u",
+			isDSiMode(), REG_SCFG_CLK, (unsigned long)REG_SCFG_EXT, ticks);
+		flashcart_core::platform::writeLogLine(probeLogFile, flashcart_core::LOG_DEBUG,
+			"probe: EXMEMCNT=0x%04X ROMCTRL=0x%08lX AUXSPICNT=0x%04X cart=%s",
+			REG_EXMEMCNT, (unsigned long)REG_ROMCTRL, REG_AUXSPICNT,
+			arm9OwnsCart ? "ARM9" : "ARM7");
+		flashcart_core::platform::writeLogLine(probeLogFile, flashcart_core::LOG_DEBUG,
+			"probe: DLDI=%s arm7capable=%d name=%s", dldiModeStr, arm7Capable, dldiName);
+		fclose(probeLogFile);
+	}
 
 	// The screen keeps its own layout: one field per line, colour-coded, spaced
 	// for glancing at -- photograph it when there is no SD to log to.
