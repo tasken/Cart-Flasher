@@ -47,7 +47,14 @@ void DrawCharacter(u16 *screen, int character, int x, int y, u16 color) {
 		uint8_t charPos = font[character * FONT_HEIGHT + yy];
 		for (int xx = (8 - FONT_WIDTH); xx <= 7; xx++) {
 			if ((charPos >> xx) & 1) {
-				setPixel(screen, y + yy, x + FONT_WIDTH - xx, color);
+				// Bit 7 (MSB) is the glyph's leftmost pixel, bit (8-FONT_WIDTH)
+				// its rightmost -- offset must be 7-xx (0 for bit 7, up to
+				// FONT_WIDTH-1 for bit 8-FONT_WIDTH). `FONT_WIDTH - xx` was off
+				// by one, drawing every glyph shifted 1px left of `x` (columns
+				// -1..FONT_WIDTH-2 instead of 0..FONT_WIDTH-1) -- present since
+				// this project's first commit, never actually visible because
+				// the shift is uniform across every pixel of every glyph.
+				setPixel(screen, y + yy, x + 7 - xx, color);
 			}
 		}
 	}
