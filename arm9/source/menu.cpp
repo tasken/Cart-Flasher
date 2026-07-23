@@ -352,10 +352,21 @@ void menu_lvl2(Flashcart* cart)
 						ClearScreen(BOTTOM_SCREEN, COLOR_BLACK);
 						break;
 					}
+				// A completed operation (whatever the result) always returns
+				// to the cart list, not just this cart's own menu -- matches
+				// the ALL_OK/error screens above, which all wait for a
+				// keypress then fall through to here.
+				break;
 			}
-			// No "nothing was touched" screen: <B> already means cancel on both
-			// prompts. A mistyped combo has its own message in the retry loop.
-			break;
+			// Cancelled at the confirm/combo screen -- same landing spot as
+			// cancelling the file browser above: back to this cart's own
+			// Back up/Write flash list, not all the way out to the cart
+			// list. No separate "nothing was touched" screen: <B> already
+			// means cancel on both prompts.
+			DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
+			DrawString(TOP_SCREEN, FONT_WIDTH, SCREEN_HEIGHT - FONT_HEIGHT, COLOR_YELLOW, "<A> Select   <B> Back");
+			dirty = true;
+			continue;
 		}
 	}
 }
