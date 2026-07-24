@@ -16,7 +16,9 @@ using std::uint32_t;
 #define PAGE_ROUND_UP(x, s) ( ((x) + (s)-1)  & (~((s)-1)) )
 #define PAGE_ROUND_DOWN(x, s) ( (x) & (~((s)-1)) )
 
+#ifndef BIT
 #define BIT(n) (1 << (n))
+#endif
 namespace flashcart_core {
 class Flashcart {
 public:
