@@ -411,15 +411,13 @@ void menu_lvl2(Flashcart* cart)
 					case ALL_OK:
 						if (menu_sel == 0) {
 							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_GREEN,
-								"Backup complete! Your dump was saved.");
-							DrawString(TOP_SCREEN, FONT_WIDTH, (17 * FONT_HEIGHT), COLOR_YELLOW,
-								"Press <A> to continue.");
+								"Backup complete!\nYour dump was saved successfully.");
 						} else {
 							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_GREEN,
-								"All done! Your flashrom was written\nsuccessfully.");
-							DrawString(TOP_SCREEN, FONT_WIDTH, (18 * FONT_HEIGHT), COLOR_YELLOW,
-								"Press <A> to continue.");
+								"All done!\nYour flashrom was written successfully.");
 						}
+						DrawString(TOP_SCREEN, FONT_WIDTH, (18 * FONT_HEIGHT), COLOR_YELLOW,
+							"Press <A> to continue.");
 						WaitPress(KEY_A);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						ClearScreen(BOTTOM_SCREEN, COLOR_BLACK);
@@ -507,9 +505,9 @@ bool d0k3_buttoncombo(int cur_r)
 				DrawRectangle(TOP_SCREEN, 0, 12 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 12 * FONT_HEIGHT, COLOR_BLACK);
 
 				// Red error displays on Row 12 (where the combo title was).
-				// Yellow action is drawn at Row 18.
+				// Yellow action is drawn at Row 14.
 				DrawStringCentered(TOP_SCREEN, 12 * FONT_HEIGHT, COLOR_RED, "Wrong key combo, nothing was touched.");
-				DrawStringCentered(TOP_SCREEN, 18 * FONT_HEIGHT, COLOR_YELLOW, "<A> Retry   <B> Cancel");
+				DrawStringCentered(TOP_SCREEN, 14 * FONT_HEIGHT, COLOR_YELLOW, "<A> Retry   <B> Cancel");
 
 				if (!WaitConfirm()) { return false; }
 
