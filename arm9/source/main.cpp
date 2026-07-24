@@ -15,6 +15,11 @@ using namespace ncgc;
 
 int main(void)
 {
+	// Shows a register/PC dump on-screen on an ARM9 exception instead of a
+	// silent hang/reset -- costs nothing when nothing crashes, and without
+	// it there's no way to diagnose a real crash on hardware at all.
+	defaultExceptionHandler();
+
 	// BlocksDS boosts the ARM9 to 134MHz on DSi by default. libncgc's cart-protocol
 	// delays are raw cycle-count busy-waits, so doubling the clock halves their
 	// real time -- force back to 67MHz to match the timing they're tuned for.
