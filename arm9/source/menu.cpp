@@ -319,11 +319,10 @@ void menu_lvl2(Flashcart* cart)
 			// gating it the same way would train people to mash through the
 			// combo before the destructive path.
 			DrawHeader(TOP_SCREEN, cart->getName(), ((SCREEN_WIDTH - (strlen(cart->getName()) * FONT_WIDTH)) / 2));
-			const int WARN_X = 4 * FONT_WIDTH;
 			bool confirmed;
 			if (menu_sel == 0)
 			{
-				DrawString(TOP_SCREEN, WARN_X, (5 * FONT_HEIGHT), COLOR_WHITE,
+				DrawString(TOP_SCREEN, 34, (5 * FONT_HEIGHT), COLOR_WHITE,
 					"Dumping this cart's flashrom to\n/cart-backups on your SD card.\n\nNothing is written to the cart.\n\nIf it fails, or the dump is\nnonsense, STOP and open a GitHub\nissue.");
 				DrawStringCentered(TOP_SCREEN, (14 * FONT_HEIGHT), COLOR_YELLOW, "<A> Start backup   <B> Cancel");
 				confirmed = WaitConfirm();
@@ -333,7 +332,7 @@ void menu_lvl2(Flashcart* cart)
 				// Banner/icon note is write-only: restoring an untouched dump
 				// leaves the banner byte-identical, so it can't break stock
 				// DSi/3DS loading.
-				DrawString(TOP_SCREEN, WARN_X, (5 * FONT_HEIGHT), COLOR_WHITE,
+				DrawString(TOP_SCREEN, 22, (5 * FONT_HEIGHT), COLOR_WHITE,
 					"This overwrites the cart's flashrom\nand can't be undone.\n\nA changed icon or banner is blocked\nby stock DSi/3DS firmware unless CFW\nis installed. NDS/DS Lite are fine.");
 				DrawStringCentered(TOP_SCREEN, (12 * FONT_HEIGHT), COLOR_YELLOW, "Enter the key combo to confirm:");
 				confirmed = d0k3_buttoncombo(14 * FONT_HEIGHT);
