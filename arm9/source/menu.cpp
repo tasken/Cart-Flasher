@@ -54,7 +54,18 @@ void print_boot_msg(void)
 		}
 		else if (keysDown() & KEY_B)
 		{
-			exit(0);
+			// Not exit(0): libnds's _exit() first checks the transfer
+			// region for a loader-supplied bootstub signature and, if
+			// found, jumps to a loader-provided reboot address instead of
+			// powering off. Some flashcart menus (confirmed with AKMenu)
+			// don't implement or clear this and can leave stale data there
+			// that coincidentally matches the signature, sending _exit()
+			// jumping into garbage and hanging instead of the safe
+			// systemReboot()/systemShutDown() fallback it would otherwise
+			// take. systemShutDown() bypasses that check entirely and
+			// always sends a direct power-off request to the ARM7.
+			systemShutDown();
+			while (true) { swiWaitForVBlank(); }
 		}
 	}
 }
