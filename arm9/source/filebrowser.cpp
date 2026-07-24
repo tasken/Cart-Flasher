@@ -133,7 +133,10 @@ void RenderList(const char* currentPath, const std::vector<FileEntry>& entries, 
 
 bool BrowseForFile(const char* startPath, const char* ext, char* outPath, size_t outPathSize) {
 	if (mount_fat() != ALL_OK) {
-		DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, "Couldn't access the SD card.\nMake sure it's inserted, then\npress <B> to go back.");
+		DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
+			"Couldn't access the SD card.\nMake sure it's inserted.");
+		DrawString(TOP_SCREEN, FONT_WIDTH, (18 * FONT_HEIGHT), COLOR_YELLOW,
+			"Press <B> to go back.");
 		WaitPress(KEY_B);
 		return false;
 	}

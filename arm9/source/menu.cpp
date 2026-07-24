@@ -225,9 +225,12 @@ void menu_lvl1(Flashcart* cart)
 				// the error's own first line isn't guaranteed longer than every
 				// possible "Detecting <cart name>..." line.
 				DrawRectangle(TOP_SCREEN, 0, errorRow * FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
-				// Message and "press <B>" instruction combined into one red
-				// string, matching every error case in menu_lvl2's switch below.
-				DrawString(TOP_SCREEN, FONT_WIDTH, errorRow * FONT_HEIGHT, COLOR_RED, "Couldn't detect this flashcart.\nCheck it's inserted firmly, then\npress <B> to go back.");
+				// Message and "press <B>" instruction split, matching every
+				// error case in menu_lvl2's switch below.
+				DrawString(TOP_SCREEN, FONT_WIDTH, errorRow * FONT_HEIGHT, COLOR_RED,
+					"Couldn't detect this flashcart.\nCheck it's inserted firmly.");
+				DrawString(TOP_SCREEN, FONT_WIDTH, (errorRow + 3) * FONT_HEIGHT, COLOR_YELLOW,
+					"Press <B> to go back.");
 				WaitPress(KEY_B);
 				ClearScreen(TOP_SCREEN, COLOR_BLACK);
 				DrawHeader(TOP_SCREEN, "Choose your flashcart", ((SCREEN_WIDTH - (strlen("Choose your flashcart") * FONT_WIDTH)) / 2));
@@ -347,51 +350,82 @@ void menu_lvl2(Flashcart* cart)
 
 				switch (ntrboot_return) {
 					case FAT_MOUNT_FAILED:
-						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, "Couldn't access the SD card.\nMake sure it's inserted, then\npress <B> to go back.");
+						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
+							"Couldn't access the SD card.\nMake sure it's inserted.");
+						DrawString(TOP_SCREEN, FONT_WIDTH, (18 * FONT_HEIGHT), COLOR_YELLOW,
+							"Press <B> to go back.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case FILE_OPEN_FAILED:
-						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
-							"Couldn't create the backup file.\nCheck the SD card isn't full or\nlocked, then press <B> to go back." :
-							"Couldn't open that file.\nIt may have been moved or deleted.\nPress <B> to go back.");
+						if (menu_sel == 0) {
+							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
+								"Couldn't create the backup file.\nCheck the SD card isn't full or locked.");
+						} else {
+							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
+								"Couldn't open the selected file.\nIt may have been moved or deleted.");
+						}
+						DrawString(TOP_SCREEN, FONT_WIDTH, (18 * FONT_HEIGHT), COLOR_YELLOW,
+							"Press <B> to go back.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case FILE_IO_FAILED:
-						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
-							"Something went wrong writing the\nbackup file. Check the SD card has\nfree space, then press <B> to go back." :
-							"Something went wrong reading that\nfile, it may be damaged, or the\nSD card's loose. Press <B> to go back.");
+						if (menu_sel == 0) {
+							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
+								"Could not write the backup file.\nCheck the SD card has free space.");
+						} else {
+							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
+								"Failed to read the selected file.\nThe file is damaged or SD card is loose.");
+						}
+						DrawString(TOP_SCREEN, FONT_WIDTH, (18 * FONT_HEIGHT), COLOR_YELLOW,
+							"Press <B> to go back.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case FLASH_OP_FAILED:
-						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED, (menu_sel == 0) ?
-							"Reading from the cart failed\npartway through. Try reseating it.\nPress <B> to return to the menu." :
-							"Writing to the cart failed\npartway through. Try reseating it.\nPress <B> to return to the menu.");
+						if (menu_sel == 0) {
+							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
+								"Reading from the cart failed\npartway through. Try reseating it.");
+						} else {
+							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
+								"Writing to the cart failed\npartway through. Try reseating it.");
+						}
+						DrawString(TOP_SCREEN, FONT_WIDTH, (18 * FONT_HEIGHT), COLOR_YELLOW,
+							"Press <B> to return to the menu.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case MEM_ALLOC_FAILED:
 						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_RED,
-							"Not enough free console memory\nto buffer the firmware. Try a\nsmaller backup file, press <B>.");
+							"Not enough free console memory\nto buffer the cartridge firmware.");
+						DrawString(TOP_SCREEN, FONT_WIDTH, (18 * FONT_HEIGHT), COLOR_YELLOW,
+							"Press <B> to go back.");
 						WaitPress(KEY_B);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						break;
 
 					case ALL_OK:
-						DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_GREEN, (menu_sel == 0) ?
-							"Backup complete! Your dump was\nsaved. Press <A> to continue." :
-							"All done! Your flash was written\nsuccessfully. Press <A> to continue.");
+						if (menu_sel == 0) {
+							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_GREEN,
+								"Backup complete! Your dump was saved.");
+							DrawString(TOP_SCREEN, FONT_WIDTH, (17 * FONT_HEIGHT), COLOR_YELLOW,
+								"Press <A> to continue.");
+						} else {
+							DrawString(TOP_SCREEN, FONT_WIDTH, (15 * FONT_HEIGHT), COLOR_GREEN,
+								"All done! Your flashrom was written\nsuccessfully.");
+							DrawString(TOP_SCREEN, FONT_WIDTH, (18 * FONT_HEIGHT), COLOR_YELLOW,
+								"Press <A> to continue.");
+						}
 						WaitPress(KEY_A);
 						ClearScreen(TOP_SCREEN, COLOR_BLACK);
 						ClearScreen(BOTTOM_SCREEN, COLOR_BLACK);
 						break;
-					}
+				}
 				// A completed operation (whatever the result) always returns
 				// to the cart list, not just this cart's own menu -- matches
 				// the ALL_OK/error screens above, which all wait for a
