@@ -1,3 +1,5 @@
+#pragma once
+
 #include "device.h"
 
 void print_boot_msg(void);

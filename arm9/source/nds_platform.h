@@ -1,3 +1,5 @@
+#pragma once
+
 #include "device.h"
 
 enum return_codes_t {ALL_OK, FAT_MOUNT_FAILED, FILE_OPEN_FAILED, FILE_IO_FAILED, FLASH_OP_FAILED, MEM_ALLOC_FAILED};
