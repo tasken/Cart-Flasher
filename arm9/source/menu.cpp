@@ -502,19 +502,20 @@ bool d0k3_buttoncombo(int cur_r)
 				// this only suppresses a reset, it never advances the combo.
 			}
 			else {
-				// Says what went wrong instead of silently rewinding -- a silent
-				// reset looks identical to presses not registering. The combo
-				// isn't re-rolled (generated once above), so a retry redraws the
-				// same glyphs.
-				//
-				// Two rows under the combo, keeping its blank separator. Red
-				// states the problem, yellow offers the choice, matching every
-				// other screen's split.
-				const int msg_r = cur_r + (2 * FONT_HEIGHT);
-				DrawStringCentered(TOP_SCREEN, msg_r, COLOR_RED, "Wrong key combo, nothing was touched.");
-				DrawStringCentered(TOP_SCREEN, msg_r + FONT_HEIGHT, COLOR_YELLOW, "<A> Retry   <B> Cancel");
+				// Clear the combo title (Row 12) and arrows (Row 14) on failure.
+				// Wipes from Row 12 to the bottom of the screen.
+				DrawRectangle(TOP_SCREEN, 0, 12 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 12 * FONT_HEIGHT, COLOR_BLACK);
+
+				// Red error displays on Row 12 (where the combo title was).
+				// Yellow action is drawn at Row 18.
+				DrawStringCentered(TOP_SCREEN, 12 * FONT_HEIGHT, COLOR_RED, "Wrong key combo, nothing was touched.");
+				DrawStringCentered(TOP_SCREEN, 18 * FONT_HEIGHT, COLOR_YELLOW, "<A> Retry   <B> Cancel");
+
 				if (!WaitConfirm()) { return false; }
-				DrawRectangle(TOP_SCREEN, 0, msg_r, SCREEN_WIDTH, 2 * FONT_HEIGHT, COLOR_BLACK);
+
+				// Clear the error/action lines and restore the combo title before retrying.
+				DrawRectangle(TOP_SCREEN, 0, 12 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 12 * FONT_HEIGHT, COLOR_BLACK);
+				DrawStringCentered(TOP_SCREEN, 12 * FONT_HEIGHT, COLOR_YELLOW, "Enter the key combo to confirm:");
 				depth = 0;
 			}
 		}
