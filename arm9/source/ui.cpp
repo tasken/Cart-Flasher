@@ -107,6 +107,8 @@ void DrawListRow(u16 *screen, int y, bool selected, u16 highlightColor, const ch
 
 // Plain button-hint line, matching every other screen -- replaces a
 // permanent 3-row grey status box; version info moved to the boot screen.
+// <START> still powers off from this screen (HandlePowerOffShortcut(), called
+// from menu_lvl1's loop) -- just not advertised here, unlike the boot splash.
 void DrawFooter(int loglevel)
 {
 	DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);

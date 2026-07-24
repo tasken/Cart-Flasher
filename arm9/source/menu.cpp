@@ -22,7 +22,26 @@
 using namespace flashcart_core;
 using namespace ncgc;
 
-int global_loglevel = 1; //https://github.com/ntrteam/flashcart_core/blob/master/platform.h#L6 
+int global_loglevel = 1; //https://github.com/ntrteam/flashcart_core/blob/master/platform.h#L6
+
+// <START> power-off shortcut, checked once per frame from the boot splash
+// and the cart list -- deliberately not everywhere in the app (see the
+// switch-flash confirm/combo screens, which don't offer it). GodMode9i's own
+// startMenu() was checked as precedent for the *action* itself: it offers
+// exactly "Power off" (systemShutDown()) and a DSi-specific "Reboot", never
+// a generic "return to loader" action. That's deliberate, not an oversight
+// -- libnds's exit(0) can hang on flashcart menus (confirmed with AKMenu)
+// that don't properly support or clear its loader-return protocol, so this
+// app doesn't offer that path anywhere either. Never returns if <START> was
+// pressed.
+void HandlePowerOffShortcut(void)
+{
+	if (keysDown() & KEY_START)
+	{
+		systemShutDown();
+		while (true) { swiWaitForVBlank(); }
+	}
+}
 
 void print_boot_msg(void)
 {
@@ -32,40 +51,17 @@ void print_boot_msg(void)
 	sprintf(header_title, "Cart-Flasher %s", CART_FLASHER_VERSION);
 	DrawHeader(TOP_SCREEN, header_title, ((SCREEN_WIDTH - (strlen(header_title) * FONT_WIDTH)) / 2));
 	DrawString(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 2, COLOR_WHITE, bootmsg);
-	DrawString(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 13, COLOR_YELLOW, "<A> Continue   <B> Power off");
+	DrawString(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 13, COLOR_YELLOW, "<A> Continue   <START> Power off");
 	DrawStringF(TOP_SCREEN, FONT_WIDTH, FONT_HEIGHT * 16, COLOR_GREY, "Developed by @tasken\n%s build - Commit: %s\nBased on work by jason0597 & DS-Homebrew", CART_FLASHER_BUILD_KIND, CART_FLASHER_COMMIT);
 
 	while (true)
 	{
 		swiWaitForVBlank();
 		scanKeys();
-		// <A> checked first, and <B> as an else-if: this is the very first
-		// scanKeys()/keysDown() poll of the whole program's life, and a
-		// stale/spurious first-poll read reporting multiple buttons at once
-		// (seen as an instant, no-cart-list-ever-shown exit on melonDS,
-		// consistent with this exact KEY_B branch firing on an "A" press --
-		// possibly an input-emulation cold-start quirk, not something real
-		// hardware does) would otherwise hit the destructive Power-off
-		// branch first. Prioritizing <A> means an ambiguous read continues
-		// instead of exiting.
+		HandlePowerOffShortcut();
 		if (keysDown() & KEY_A)
 		{
 			break;
-		}
-		else if (keysDown() & KEY_B)
-		{
-			// Not exit(0): libnds's _exit() first checks the transfer
-			// region for a loader-supplied bootstub signature and, if
-			// found, jumps to a loader-provided reboot address instead of
-			// powering off. Some flashcart menus (confirmed with AKMenu)
-			// don't implement or clear this and can leave stale data there
-			// that coincidentally matches the signature, sending _exit()
-			// jumping into garbage and hanging instead of the safe
-			// systemReboot()/systemShutDown() fallback it would otherwise
-			// take. systemShutDown() bypasses that check entirely and
-			// always sends a direct power-off request to the ARM7.
-			systemShutDown();
-			while (true) { swiWaitForVBlank(); }
 		}
 	}
 }
@@ -149,6 +145,7 @@ void menu_lvl1(Flashcart* cart)
 		bool reprintFlag = false;
 
 		scanKeys();
+		HandlePowerOffShortcut();
 		if (keysDown() & KEY_DOWN && menu_sel < (flashcart_list_size - 1))
 		{
 			menu_sel++;
