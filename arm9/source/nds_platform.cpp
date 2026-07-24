@@ -218,134 +218,122 @@ static char* calculate_backup_path(const char *cart_name) {
     return path;
 }
 
-return_codes_t DumpFlash(flashcart_core::Flashcart* cart)
-{
-	u32 Flash_size = cart->getMaxLength(); //Get the flashrom size
-	const u32 chunkSize = 0x8000; // 32KB chunks
-
-	u8 *chunkBuffer = new(std::nothrow) u8[chunkSize];
-	if (!chunkBuffer) {
-		return MEM_ALLOC_FAILED;
-	}
-
-	if (mount_fat() != ALL_OK) {
-		delete[] chunkBuffer;
-		return FAT_MOUNT_FAILED; //Fat init failed
-	}
-
-	char* backup_path = calculate_backup_path(cart->getShortName());
-	FILE *FileOut = fopen(backup_path, "wb");
-	free(backup_path);
-	if (!FileOut) {
-		delete[] chunkBuffer;
-		return FILE_OPEN_FAILED; //File opening failed
-	}
-
-	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
-	DrawString(TOP_SCREEN, FONT_WIDTH, 6 * FONT_HEIGHT, COLOR_WHITE, "Backing up your cart...");
-
-	progressCount = 0; // start the driver-side draw throttle from a known phase
-	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Reading flash");
-
-	for (u32 chunkOffset = 0; chunkOffset < Flash_size; chunkOffset += chunkSize) {
-		SetProgressOverride(chunkOffset, Flash_size);
-		char addrStr[64];
-		sprintf(addrStr, "Reading address: 0x%08lX", chunkOffset);
-		DrawRectangle(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, SCREEN_WIDTH - (2 * FONT_WIDTH), FONT_HEIGHT, COLOR_BLACK);
-		DrawString(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, COLOR_WHITE, addrStr);
-
-		u32 currentChunkSize = std::min(chunkSize, Flash_size - chunkOffset);
-		if (!cart->readFlash(chunkOffset, currentChunkSize, chunkBuffer)) {
-			delete[] chunkBuffer;
-			fclose(FileOut);
-			SetProgressOverride(0, 0); // Reset override
-			return FLASH_OP_FAILED; //Flash reading failed
-		}
-
-		if (fwrite(chunkBuffer, 1, currentChunkSize, FileOut) != currentChunkSize) {
-			delete[] chunkBuffer;
-			fclose(FileOut);
-			SetProgressOverride(0, 0); // Reset override
-			return FILE_IO_FAILED; //File writing failed
-		}
-
-		SetProgressOverride(0, 0); // Reset override before drawing absolute progress
-		ShowProgress(BOTTOM_SCREEN, chunkOffset + currentChunkSize, Flash_size, "Reading flash");
-	}
-
-	fclose(FileOut);
-	delete[] chunkBuffer;
-
-	SetProgressOverride(0, 0); // Reset override
-	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "Reading flash");
-
-	return ALL_OK;
-}
-
-return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
+// Shared by DumpFlash()/WriteFlash() -- both stream the cart's flashrom to or
+// from a file in the same 32KB-chunk shape (open, loop with a progress bar,
+// close), the only real differences being which direction the bytes flow and
+// the wording shown on screen while it happens. isRead selects "reading FROM
+// the cart, writing TO the file" (DumpFlash's direction) vs "reading FROM the
+// file, writing TO the cart" (WriteFlash's); whichever side is the flash chip
+// maps to FLASH_OP_FAILED on failure, whichever side is the file maps to
+// FILE_IO_FAILED, regardless of which direction that is.
+static return_codes_t StreamFlash(flashcart_core::Flashcart* cart, const char* filepath, bool isRead)
 {
 	u32 Flash_size = cart->getMaxLength(); //Get the flashrom size
 	const u32 chunkSize = 0x8000; // 32KB chunks
 
 	if (mount_fat() != ALL_OK) { return FAT_MOUNT_FAILED; }
 
-	FILE *FileIn = fopen(filepath, "rb");
-	if (!FileIn) {
-		return FILE_OPEN_FAILED;
-	}
-
-	// Validate size before touching the cart -- streaming would otherwise only
-	// notice a truncated file mid-loop, aborting with the firmware half overwritten.
-	fseek(FileIn, 0, SEEK_END);
-	long fileSize = ftell(FileIn);
-	rewind(FileIn);
-	if (fileSize < 0 || (u32)fileSize < Flash_size) {
-		fclose(FileIn);
-		return FILE_IO_FAILED;
-	}
-
+	// Allocated before fopen(), not after: for isRead (DumpFlash), the fopen()
+	// below uses "wb", which truncates any pre-existing backup file the moment
+	// it succeeds -- regardless of whether anything after it fails. Checking
+	// the buffer first means a MEM_ALLOC_FAILED never costs the user their
+	// previous backup (verified via agy's independent review, .brain/
+	// streamflash-check-order-review.md -- flagged this exact ordering as a
+	// real, if low-probability, data-loss regression from the original
+	// DumpFlash(), which allocated first for the same reason).
 	u8 *chunkBuffer = new(std::nothrow) u8[chunkSize];
 	if (!chunkBuffer) {
-		fclose(FileIn);
 		return MEM_ALLOC_FAILED;
 	}
 
+	FILE *file = fopen(filepath, isRead ? "wb" : "rb");
+	if (!file) {
+		delete[] chunkBuffer;
+		return FILE_OPEN_FAILED;
+	}
+
+	if (!isRead) {
+		// Validate size before touching the cart -- streaming would otherwise only
+		// notice a truncated file mid-loop, aborting with the firmware half overwritten.
+		fseek(file, 0, SEEK_END);
+		long fileSize = ftell(file);
+		rewind(file);
+		if (fileSize < 0 || (u32)fileSize < Flash_size) {
+			delete[] chunkBuffer;
+			fclose(file);
+			return FILE_IO_FAILED;
+		}
+	}
+
+	const char *headerText = isRead ? "Backing up your cart..." : "Writing to your cart...";
+	const char *addrVerb = isRead ? "Reading" : "Writing";
+	const char *progressLabel = isRead ? "Reading flash" : "Writing flash";
+
 	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
-	DrawString(TOP_SCREEN, FONT_WIDTH, 6 * FONT_HEIGHT, COLOR_WHITE, "Writing to your cart...");
+	DrawString(TOP_SCREEN, FONT_WIDTH, 6 * FONT_HEIGHT, COLOR_WHITE, headerText);
 
 	progressCount = 0; // start the driver-side draw throttle from a known phase
-	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, "Writing flash");
+	ShowProgress(BOTTOM_SCREEN, 0, Flash_size, progressLabel);
 
 	for (u32 chunkOffset = 0; chunkOffset < Flash_size; chunkOffset += chunkSize) {
 		SetProgressOverride(chunkOffset, Flash_size);
 		char addrStr[64];
-		sprintf(addrStr, "Writing address: 0x%08lX", chunkOffset);
+		sprintf(addrStr, "%s address: 0x%08lX", addrVerb, chunkOffset);
 		DrawRectangle(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, SCREEN_WIDTH - (2 * FONT_WIDTH), FONT_HEIGHT, COLOR_BLACK);
 		DrawString(TOP_SCREEN, FONT_WIDTH, 8 * FONT_HEIGHT, COLOR_WHITE, addrStr);
 
 		u32 currentChunkSize = std::min(chunkSize, Flash_size - chunkOffset);
-		if (fread(chunkBuffer, 1, currentChunkSize, FileIn) != currentChunkSize) {
-			delete[] chunkBuffer;
-			fclose(FileIn);
-			SetProgressOverride(0, 0); // Reset override
-			return FILE_IO_FAILED; //File reading failed
+
+		if (isRead) {
+			if (!cart->readFlash(chunkOffset, currentChunkSize, chunkBuffer)) {
+				delete[] chunkBuffer;
+				fclose(file);
+				SetProgressOverride(0, 0); // Reset override
+				return FLASH_OP_FAILED; //Flash reading failed
+			}
+			if (fwrite(chunkBuffer, 1, currentChunkSize, file) != currentChunkSize) {
+				delete[] chunkBuffer;
+				fclose(file);
+				SetProgressOverride(0, 0); // Reset override
+				return FILE_IO_FAILED; //File writing failed
+			}
+		} else {
+			if (fread(chunkBuffer, 1, currentChunkSize, file) != currentChunkSize) {
+				delete[] chunkBuffer;
+				fclose(file);
+				SetProgressOverride(0, 0); // Reset override
+				return FILE_IO_FAILED; //File reading failed
+			}
+			if (!cart->writeFlash(chunkOffset, currentChunkSize, chunkBuffer)) {
+				delete[] chunkBuffer;
+				fclose(file);
+				SetProgressOverride(0, 0); // Reset override
+				return FLASH_OP_FAILED; //Flash writing failed
+			}
 		}
 
-		if (!cart->writeFlash(chunkOffset, currentChunkSize, chunkBuffer)) {
-			delete[] chunkBuffer;
-			fclose(FileIn);
-			SetProgressOverride(0, 0); // Reset override
-			return FLASH_OP_FAILED; //Flash writing failed
-		}
 		SetProgressOverride(0, 0); // Reset override before drawing absolute progress
-		ShowProgress(BOTTOM_SCREEN, chunkOffset + currentChunkSize, Flash_size, "Writing flash");
+		ShowProgress(BOTTOM_SCREEN, chunkOffset + currentChunkSize, Flash_size, progressLabel);
 	}
 
-	fclose(FileIn);
+	fclose(file);
 	delete[] chunkBuffer;
 
 	SetProgressOverride(0, 0); // Reset override
-	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, "Writing flash");
+	ShowProgress(BOTTOM_SCREEN, Flash_size, Flash_size, progressLabel);
 
 	return ALL_OK;
+}
+
+return_codes_t DumpFlash(flashcart_core::Flashcart* cart)
+{
+	char* backup_path = calculate_backup_path(cart->getShortName());
+	return_codes_t result = StreamFlash(cart, backup_path, true);
+	free(backup_path);
+	return result;
+}
+
+return_codes_t WriteFlash(flashcart_core::Flashcart* cart, const char* filepath)
+{
+	return StreamFlash(cart, filepath, false);
 }
