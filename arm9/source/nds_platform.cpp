@@ -231,6 +231,13 @@ static return_codes_t StreamFlash(flashcart_core::Flashcart* cart, const char* f
 	u32 Flash_size = cart->getMaxLength(); //Get the flashrom size
 	const u32 chunkSize = 0x8000; // 32KB chunks
 
+	// Cleared up front, not just before the progress loop: every early return
+	// below (bad SD card, no memory, can't open the file, file too small)
+	// used to leave the confirm/combo screen behind it, so menu.cpp's error
+	// message at row 15 landed right next to a stale, now-dead "<A>.../<B>..."
+	// prompt from the screen before it.
+	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
+
 	if (mount_fat() != ALL_OK) { return FAT_MOUNT_FAILED; }
 
 	// Allocated before fopen(), not after: for isRead (DumpFlash), the fopen()
@@ -269,7 +276,6 @@ static return_codes_t StreamFlash(flashcart_core::Flashcart* cart, const char* f
 	const char *addrVerb = isRead ? "Reading" : "Writing";
 	const char *progressLabel = isRead ? "Reading flash" : "Writing flash";
 
-	DrawRectangle(TOP_SCREEN, 0, 2 * FONT_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - 2 * FONT_HEIGHT, COLOR_BLACK);
 	DrawString(TOP_SCREEN, FONT_WIDTH, 6 * FONT_HEIGHT, COLOR_WHITE, headerText);
 
 	progressCount = 0; // start the driver-side draw throttle from a known phase
