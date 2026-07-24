@@ -39,13 +39,22 @@ void print_boot_msg(void)
 	{
 		swiWaitForVBlank();
 		scanKeys();
-		if (keysDown() & KEY_B)
-		{
-			exit(0);
-		}
+		// <A> checked first, and <B> as an else-if: this is the very first
+		// scanKeys()/keysDown() poll of the whole program's life, and a
+		// stale/spurious first-poll read reporting multiple buttons at once
+		// (seen as an instant, no-cart-list-ever-shown exit on melonDS,
+		// consistent with this exact KEY_B branch firing on an "A" press --
+		// possibly an input-emulation cold-start quirk, not something real
+		// hardware does) would otherwise hit the destructive Power-off
+		// branch first. Prioritizing <A> means an ambiguous read continues
+		// instead of exiting.
 		if (keysDown() & KEY_A)
 		{
 			break;
+		}
+		else if (keysDown() & KEY_B)
+		{
+			exit(0);
 		}
 	}
 }
