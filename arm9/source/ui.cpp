@@ -131,12 +131,20 @@ void DrawStringF(u16 *screen, int x, int y, u16 color, const char *format, ...)
 {
 	char str[256];
 	char *p = str;
-	va_list va;
+	va_list va, va_retry;
 
 	va_start(va, format);
+	// A va_list is spent after one vsnprintf() call -- reusing it for the
+	// retry below without a fresh copy is undefined behavior (silently
+	// "worked" on this ARM EABI target since va_list is just a stack
+	// pointer, but not guaranteed). va_copy() before the first call gives
+	// the overflow path its own valid, unconsumed list.
+	va_copy(va_retry, va);
 	int w = vsnprintf(str, sizeof(str), format, va);
+	va_end(va);
 	if (w < 0) {
 		// printf failed
+		va_end(va_retry);
 		return;
 	}
 	else if ((unsigned int)w > sizeof(str) - 1) {
@@ -144,11 +152,11 @@ void DrawStringF(u16 *screen, int x, int y, u16 color, const char *format, ...)
 		// allocate a buffer big enough
 		char *m = (char *)malloc(w + 1);
 		if (m) {
-			vsnprintf(m, w + 1, format, va);
+			vsnprintf(m, w + 1, format, va_retry);
 			p = m;
 		} // if malloc fails, we just write the truncated string i guess
 	}
-	va_end(va);
+	va_end(va_retry);
 
 	DrawString(screen, x, y, color, p);
 	if (p != str && p) {
