@@ -197,6 +197,11 @@ void menu_lvl1(Flashcart* cart)
 			// matches every other in-progress status line in this app (e.g.
 			// DumpFlash/WriteFlash's "Backing up.../Writing to..."). Yellow is
 			// reserved for button prompts everywhere else, never plain status.
+			// Footer hidden while this runs: it's a blocking call with no
+			// scanKeys() polling underneath it, so "<A> Select   <Y> Log: %s"
+			// would sit there doing nothing -- restored by the DrawFooter()
+			// call on both paths once detection resolves.
+			DrawRectangle(TOP_SCREEN, 0, SCREEN_HEIGHT - FONT_HEIGHT, SCREEN_WIDTH, FONT_HEIGHT, COLOR_BLACK);
 			DrawStringF(TOP_SCREEN, FONT_WIDTH, errorRow * FONT_HEIGHT, COLOR_WHITE, "Detecting %s...", cart->getName());
 
 			if (isDSiMode() || strcmp(cart->getShortName(), "DSTT") == 0) {
