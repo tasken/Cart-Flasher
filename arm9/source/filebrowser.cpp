@@ -87,7 +87,12 @@ void ListDirectory(const char* path, const char* ext, std::vector<FileEntry>& ou
 void RenderList(const char* currentPath, const std::vector<FileEntry>& entries, int cursor, int scrollTop, int visibleCount) {
 	DrawHeader(TOP_SCREEN, "Pick a file to write", ((SCREEN_WIDTH - (strlen("Pick a file to write") * FONT_WIDTH)) / 2));
 
-	const int maxPathChars = SCREEN_WIDTH / FONT_WIDTH;
+	// SCREEN_WIDTH/FONT_WIDTH (42) is one too many: DrawString starts drawing
+	// at x=FONT_WIDTH (this line's own left margin), not x=0, so only 41
+	// characters actually fit before it wraps to the next row -- a 42-char
+	// path would spill its last character onto row 2, landing on the first
+	// file-list entry. Verified directly: 6 + 41*6 = 252, +6 more > 256.
+	const int maxPathChars = (SCREEN_WIDTH / FONT_WIDTH) - 1;
 	char pathDisplay[64];
 	int pathLen = strlen(currentPath);
 	if (pathLen > maxPathChars) {
